@@ -1,4 +1,4 @@
-package iotsystem;
+package iotclient;
 
 import java.io.IOException;
 import java.io.ObjectInputStream;

@@ -1,4 +1,4 @@
-package iotsystem;
+package iotclient;
 
 /**
  * Represents messages to be sent between server and client.
