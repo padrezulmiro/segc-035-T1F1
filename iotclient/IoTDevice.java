@@ -39,6 +39,7 @@ public class IoTDevice {
         connectDevice(serverAdress);
         deviceAuth(userid, password);
         sendDeviceID(devid);
+        testDevice();
         printMenu();
         // Enquanto o utilizador não pressionar CTRL+C, o programa deverá voltar ao
         // passo 9. Caso contrário, termina.
@@ -46,6 +47,35 @@ public class IoTDevice {
             System.out.print("> ");
             String command = sc.nextLine();
             // TODO Execute comand
+        }
+    }
+
+    private static void testDevice() {
+        // Send IoTDevice file name
+        // Send IoTDevice file size
+        // Receive message
+        MessageCode code;
+        try {
+            code = (MessageCode) in.readObject();
+            switch (code) {
+                case NOK_TESTED:
+                System.out.println(MessageCode.NOK_TESTED.getDesc());
+                // TODO
+                // System exit
+                    break;
+                case OK_TESTED:
+                System.out.println(MessageCode.OK_TESTED.getDesc());
+                // TODO
+                    break;
+                default:
+                    break;
+            }
+        } catch (ClassNotFoundException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        } catch (IOException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
         }
     }
 
