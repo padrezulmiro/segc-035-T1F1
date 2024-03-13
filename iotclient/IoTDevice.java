@@ -38,6 +38,7 @@ public class IoTDevice {
         // Connection & Authentication
         connectDevice(serverAdress);
         deviceAuth(userid, password);
+        sendDeviceID(devid);
         printMenu();
         // Enquanto o utilizador não pressionar CTRL+C, o programa deverá voltar ao
         // passo 9. Caso contrário, termina.
@@ -90,7 +91,7 @@ public class IoTDevice {
     }
 
     /**
-     * TODO
+     * Authenticates device on the server.
      * 
      * @param user
      * @param password
@@ -109,11 +110,18 @@ public class IoTDevice {
                 switch (code) {
                     case WRONG_PWD:
                         System.out.println(MessageCode.WRONG_PWD.getDesc());
-                        // TODO
+                        // Wrong password. Try again.
+                        // Server waits for another password and resends a message code
+                        Scanner sc = new Scanner(System.in);
+                        System.out.println("Password:");
+                        String newPassword = sc.nextLine();
+                        sc.close();
+                        out.writeObject(newPassword);
                         break;
                     case OK_NEW_USER:
                         System.out.println(MessageCode.OK_NEW_USER.getDesc());
                         // TODO
+                        auth = true;
                         break;
                     case OK_USER:
                         System.out.println(MessageCode.OK_USER.getDesc());
@@ -134,5 +142,46 @@ public class IoTDevice {
             System.exit(-1);
         }
 
+    }
+
+    /**
+     * 
+     * @param deviceID
+     */
+    private static void sendDeviceID(String deviceID) {
+        try {
+            System.out.println("Starting authentication.");
+            in = new ObjectInputStream(clientSocket.getInputStream());
+            out = new ObjectOutputStream(clientSocket.getOutputStream());
+            boolean validID = false;
+
+            do {
+                MessageCode code = (MessageCode) in.readObject();
+                switch (code) {
+                    case NOK_DEVID:
+                        System.out.println(MessageCode.NOK_DEVID.getDesc());
+
+                        Scanner sc = new Scanner(System.in);
+                        System.out.println("New device ID:");
+                        String newID = sc.nextLine();
+                        sc.close();
+                        out.writeObject(newID);
+                        break;
+                    case OK_DEVID:
+                        System.out.println(MessageCode.OK_DEVID.getDesc());
+                        validID = true;
+                    default:
+                        break;
+                }
+            } while (!validID);
+
+        } catch (IOException e) {
+            System.err.println("ERROR" + e.getMessage());
+            System.exit(-1);
+        } catch (ClassNotFoundException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+            System.exit(-1);
+        }
     }
 }
