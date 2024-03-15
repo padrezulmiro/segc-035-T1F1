@@ -43,7 +43,6 @@ public class IoTServer {
                 ServerThread thread = new ServerThread(connection);
                 thread.start();
             } catch (IOException e) {
-                // TODO Auto-generated catch block
                 e.printStackTrace();
             }
         }
