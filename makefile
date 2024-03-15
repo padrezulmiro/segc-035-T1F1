@@ -16,3 +16,6 @@ SERVER_FULL_PATHS := $(addsuffix .java,$(addprefix $(SERVER_DIR)/,$(SERVER_SRC))
 
 all:
 	javac -d bin $(DEVICE_FULL_PATHS) $(SERVER_FULL_PATHS)
+
+clean:
+	rm -r bin; mkdir bin
