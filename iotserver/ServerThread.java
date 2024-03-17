@@ -1,3 +1,5 @@
+package iotserver;
+
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -33,8 +35,8 @@ public class ServerThread extends Thread {
         System.out.println("Accepted connection!");
 
         try {
-            in = new ObjectInputStream(socket.getInputStream());
             out = new ObjectOutputStream(socket.getOutputStream());
+            in = new ObjectInputStream(socket.getInputStream()); //socket is closed here
 
             userRecord = initializeFile("user.txt");
             userScanner = new Scanner(userRecord);

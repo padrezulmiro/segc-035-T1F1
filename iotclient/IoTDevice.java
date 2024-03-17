@@ -113,9 +113,10 @@ public class IoTDevice {
 
         // Try server connection
         System.out.println("Connecting to server.");
-        try(Socket clientSocket = new Socket(addr, port)) {
+        try{
+            Socket clientSocket = new Socket(addr, port); 
             System.out.println("Connection successful - " + addr + ":" + port);
-            in = new ObjectInputStream(clientSocket.getInputStream());
+            in = new ObjectInputStream(clientSocket.getInputStream()); //the line that prompts the closed socket exceptionsocket
             out = new ObjectOutputStream(clientSocket.getOutputStream());
             return true;
         } catch (UnknownHostException e) {
