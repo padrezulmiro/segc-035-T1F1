@@ -47,7 +47,108 @@ public class IoTDevice {
             System.out.print("> ");
             String command = sc.nextLine();
             // TODO Execute comand
+            executeCommand(command);
         }
+    }
+
+    /**
+     * Takes a string and executes the corresponding command.
+     * 
+     * @param command
+     */
+    private static void executeCommand(String command) {
+        // First word is the command
+        String[] cmd = command.split(" ");
+
+        switch (cmd[0]) {
+            case "CREATE":
+                if (cmd.length != 2) {
+                    System.out.println("Error: incorrect args\nUsage: CREATE <dm>");
+                } else {
+                    createDomain(cmd[1]);
+                }
+                break;
+            case "ADD":
+                if (cmd.length != 3) {
+                    System.out.println("Error: incorrect args\nUsage: ADD <user1> <dm>");
+                } else {
+                    addUser(cmd[1], cmd[2]);
+                }
+                break;
+            case "RD:":
+                if (cmd.length != 2) {
+                    System.out.println("Error: incorrect args\nUsage: RD <dm>");
+                } else {
+                    registerDevice(cmd[1]);
+                }
+                break;
+            case "ET:":
+                if (cmd.length != 2) {
+                    System.out.println("Error: incorrect args\nUsage: ET <float>");
+                } else {
+                    sendTemperature(cmd[1]);
+                }
+                break;
+            case "EI:":
+                if (cmd.length != 2) {
+                    System.out.println("Error: incorrect args\nUsage: EI <filename.jpg>");
+                } else {
+                    sendImage(cmd[1]);
+                }
+                break;
+            case "RT:":
+                if (cmd.length != 2) {
+                    System.out.println("Error: incorrect args\nUsage: RT <dm>");
+                } else {
+                    receiveTemp(cmd[1]);
+                }
+                break;
+            case "RI:":
+                if (cmd.length != 2) {
+                    System.out.println("Error: incorrect args\nUsage: RI <user-id>:<dev_id>");
+                } else {
+                    receiveImage(cmd[1]);
+                }
+                break;
+            default:
+                System.out.println("That command does not exist.");
+                break;
+        }
+    }
+
+    private static void receiveImage(String string) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'receiveImage'");
+    }
+
+    private static void receiveTemp(String string) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'receiveTemp'");
+    }
+
+    private static void sendImage(String string) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'sendImage'");
+    }
+
+    private static void sendTemperature(String string) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'sendTemperature'");
+    }
+
+    private static void registerDevice(String string) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'registerDevice'");
+    }
+
+    private static void addUser(String string, String string2) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'addUser'");
+    }
+
+    private static void createDomain(String string) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'createDomain'");
     }
 
     private static void testDevice() {
@@ -59,13 +160,13 @@ public class IoTDevice {
             code = (MessageCode) in.readObject();
             switch (code) {
                 case NOK_TESTED:
-                System.out.println(MessageCode.NOK_TESTED.getDesc());
-                // TODO
-                // System exit
+                    System.out.println(MessageCode.NOK_TESTED.getDesc());
+                    // TODO
+                    // System exit
                     break;
                 case OK_TESTED:
-                System.out.println(MessageCode.OK_TESTED.getDesc());
-                // TODO
+                    System.out.println(MessageCode.OK_TESTED.getDesc());
+                    // TODO
                     break;
                 default:
                     break;
