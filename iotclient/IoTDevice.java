@@ -41,13 +41,12 @@ public class IoTDevice {
         deviceAuth(userid, password); // Step 2
         sendDeviceID(devid); // Steps 3 + 4
         testDevice(); // Steps 5 + 6
-        printMenu();
+        printMenu(); // Step 7
 
         // Program doesn't end until CTRL+C is pressed
-        while (true) {
+        while (true) { // Steps 8 - 10
             System.out.print("> ");
             String command = sc.nextLine();
-            // TODO Execute comand
             executeCommand(command);
         }
     }
@@ -147,13 +146,35 @@ public class IoTDevice {
         throw new UnsupportedOperationException("Unimplemented method 'addUser'");
     }
 
-    private static void createDomain(String string) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'createDomain'");
+    /**
+     * Asks server to create a domain with the given {@code dmName} name.
+     * 
+     * @param dmName Domain name.
+     */
+    private static void createDomain(String dmName) {
+        try {
+            out.writeObject(dmName);
+            // Receive message
+            MessageCode code = (MessageCode) in.readObject();
+            switch (code) {
+                case NOK:
+                    System.out.println(MessageCode.NOK.getDesc());
+                    break;
+                case OK:
+                    System.out.println(MessageCode.OK.getDesc());
+                    break;
+                default:
+                    break;
+            }
+        } catch (IOException | ClassNotFoundException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
     }
 
     /**
-     * Sends the name and size of the IoTDevice file to the server for remote attestation.
+     * Sends the name and size of the IoTDevice file to the server for remote
+     * attestation.
      */
     private static void testDevice() {
         try {
