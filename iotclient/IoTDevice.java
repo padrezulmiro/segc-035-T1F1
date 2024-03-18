@@ -38,7 +38,7 @@ public class IoTDevice {
         password = sc.nextLine();
 
         // Connection & Authentication
-        if(connect(serverAddress)){
+        if (connect(serverAddress)) {
             userAuth(userid, password);
             deviceAuth(devid);
             testDevice();
@@ -139,7 +139,8 @@ public class IoTDevice {
      */
     private static void sendTemperature(String temp) { // Should it test if the value can be converted to a float?
         try {
-
+            out.writeObject(MessageCode.ET); // Send opcode
+            out.writeFloat(Float.valueOf(temp)); // Send user
             // Receive message
             MessageCode code = (MessageCode) in.readObject();
             switch (code) {
@@ -160,7 +161,8 @@ public class IoTDevice {
 
     private static void registerDevice(String domain) {
         try {
-
+            out.writeObject(MessageCode.RD); // Send opcode
+            out.writeObject(domain); // Send domain
             // Receive message
             MessageCode code = (MessageCode) in.readObject();
             switch (code) {
@@ -190,7 +192,9 @@ public class IoTDevice {
      */
     private static void addUser(String user, String domain) {
         try {
-
+            out.writeObject(MessageCode.ADD); // Send opcode
+            out.writeObject(user); // Send user
+            out.writeObject(domain); // Send domain
             // Receive message
             MessageCode code = (MessageCode) in.readObject();
             switch (code) {
@@ -222,8 +226,8 @@ public class IoTDevice {
      */
     private static void createDomain(String dmName) {
         try {
-            //out.WriteObject(MessageCode)
-            out.writeObject(dmName);   // Send domain
+            out.writeObject(MessageCode.CREATE); // Send opcode
+            out.writeObject(dmName); // Send domain
             // Receive message
             MessageCode code = (MessageCode) in.readObject();
             switch (code) {
@@ -305,15 +309,16 @@ public class IoTDevice {
 
         // Try server connection
         System.out.println("Connecting to server.");
-        try{
-            Socket clientSocket = new Socket(addr, port); 
+        try {
+            Socket clientSocket = new Socket(addr, port);
             System.out.println("Connection successful - " + addr + ":" + port);
-            in = new ObjectInputStream(clientSocket.getInputStream()); //the line that prompts the closed socket exceptionsocket
+            in = new ObjectInputStream(clientSocket.getInputStream()); // the line that prompts the closed socket
+                                                                       // exceptionsocket
             out = new ObjectOutputStream(clientSocket.getOutputStream());
             return true;
         } catch (UnknownHostException e) {
             System.out.println("Server not found: " + e.getMessage());
- 
+
         } catch (IOException e) {
             System.err.println("ERROR" + e.getMessage());
             System.exit(-1);
