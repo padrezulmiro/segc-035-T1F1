@@ -37,12 +37,12 @@ public class IoTDevice {
 
         // Connection & Authentication
         connectDevice(serverAdress);
-        deviceAuth(userid, password);
-        sendDeviceID(devid);
-        testDevice();
+        deviceAuth(userid, password);   // Step 2
+        sendDeviceID(devid);            // Steps 3 + 4
+        testDevice();                   // Steps 5 + 6
         printMenu();
-        // Enquanto o utilizador não pressionar CTRL+C, o programa deverá voltar ao
-        // passo 9. Caso contrário, termina.
+
+        // Program doesn't end until CTRL+C is pressed
         while (true) {
             System.out.print("> ");
             String command = sc.nextLine();
@@ -224,7 +224,7 @@ public class IoTDevice {
     /**
      * Authenticates device on the server.
      * 
-     * @param user User ID.
+     * @param user     User ID.
      * @param password User's password.
      */
     private static void deviceAuth(String user, String password) {
@@ -280,15 +280,18 @@ public class IoTDevice {
     }
 
     /**
+     * Sends device ID for authentication.
      * 
      * @param deviceID
      */
     private static void sendDeviceID(String deviceID) {
         try {
-            System.out.println("Starting authentication.");
+            System.out.println("Starting device ID authentication.");
             in = new ObjectInputStream(clientSocket.getInputStream());
             out = new ObjectOutputStream(clientSocket.getOutputStream());
             boolean validID = false;
+
+            out.writeObject(deviceID);
 
             do {
                 MessageCode code = (MessageCode) in.readObject();
@@ -314,7 +317,6 @@ public class IoTDevice {
             System.err.println("ERROR" + e.getMessage());
             System.exit(-1);
         } catch (ClassNotFoundException e) {
-            // TODO Auto-generated catch block
             e.printStackTrace();
             System.exit(-1);
         }
