@@ -136,9 +136,31 @@ public class IoTDevice {
         throw new UnsupportedOperationException("Unimplemented method 'sendTemperature'");
     }
 
-    private static void registerDevice(String string) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'registerDevice'");
+    private static void registerDevice(String domain) {
+        try {
+            StringBuilder sb = new StringBuilder()
+                    .append("RD")
+                    .append(":")
+                    .append(domain);
+            // Send command
+            out.writeObject(sb.toString());
+
+            // Receive message
+            MessageCode code = (MessageCode) in.readObject();
+            switch (code) {
+                case NOPERM:
+                    System.out.println(MessageCode.NOPERM.getDesc());
+                    break;
+                case NODM:
+                    System.out.println(MessageCode.NODM.getDesc());
+                    break;
+                default:
+                    break;
+            }
+        } catch (IOException | ClassNotFoundException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
     }
 
     /**
