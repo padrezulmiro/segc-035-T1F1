@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
+import java.net.UnknownHostException;
 import java.util.Scanner;
 
 /**
@@ -28,7 +29,7 @@ public class IoTDevice {
                     "Error: not enough args!\nUsage: IoTDevice <serverAddress> <dev-id> <user-id>\n");
             System.exit(1);
         }
-        String serverAdress = args[0];
+        String serverAddress = args[0];
         devid = args[1];
         userid = args[2];
 
@@ -37,17 +38,17 @@ public class IoTDevice {
         password = sc.nextLine();
 
         // Connection & Authentication
-        connectDevice(serverAdress);
-        deviceAuth(userid, password); // Step 2
-        sendDeviceID(devid); // Steps 3 + 4
-        testDevice(); // Steps 5 + 6
-        printMenu(); // Step 7
-
-        // Program doesn't end until CTRL+C is pressed
-        while (true) { // Steps 8 - 10
-            System.out.print("> ");
-            String command = sc.nextLine();
-            executeCommand(command);
+        if(connect(serverAddress)){
+            userAuth(userid, password);
+            deviceAuth(devid);
+            testDevice();
+            printMenu();
+            // Program doesn't end until CTRL+C is pressed
+            while (true) {// Steps 8 - 10
+                System.out.print("> ");
+                String command = sc.nextLine();
+                executeCommand(command);
+            }
         }
     }
 
@@ -296,21 +297,28 @@ public class IoTDevice {
      * @param serverAddress - String {@code <serverAddress>} that identifies the
      *                      server. Format: {@code<IP/hostname>[:Port]}
      */
-    private static void connectDevice(String serverAddress) {
+    private static Boolean connect(String serverAddress) {
         // Check if port was given
         String[] address_port = serverAddress.split(":");
         String addr = new String(address_port[0]);
         int port = address_port.length > 1 ? Integer.parseInt(address_port[1]) : DEFAULT_PORT;
 
         // Try server connection
-        try {
-            System.out.println("Connecting to server.");
-            clientSocket = new Socket(addr, port);
+        System.out.println("Connecting to server.");
+        try{
+            Socket clientSocket = new Socket(addr, port); 
             System.out.println("Connection successful - " + addr + ":" + port);
+            in = new ObjectInputStream(clientSocket.getInputStream()); //the line that prompts the closed socket exceptionsocket
+            out = new ObjectOutputStream(clientSocket.getOutputStream());
+            return true;
+        } catch (UnknownHostException e) {
+            System.out.println("Server not found: " + e.getMessage());
+ 
         } catch (IOException e) {
             System.err.println("ERROR" + e.getMessage());
             System.exit(-1);
         }
+        return false;
     }
 
     /**
@@ -319,13 +327,13 @@ public class IoTDevice {
      * @param user     User ID.
      * @param password User's password.
      */
-    private static void deviceAuth(String user, String password) {
+    private static void userAuth(String user, String password) {
 
         try {
             System.out.println("Starting authentication.");
-            // Streams are initialized here.
-            in = new ObjectInputStream(clientSocket.getInputStream());
-            out = new ObjectOutputStream(clientSocket.getOutputStream());
+            out.writeObject(MessageCode.AU);
+            out.writeObject(user);
+            out.writeObject(password);
             boolean auth = false;
 
             // Send given user and password
@@ -376,11 +384,11 @@ public class IoTDevice {
      * 
      * @param deviceID
      */
-    private static void sendDeviceID(String deviceID) {
+    private static void deviceAuth(String deviceID) {
         try {
             System.out.println("Starting device ID authentication.");
-            in = new ObjectInputStream(clientSocket.getInputStream());
-            out = new ObjectOutputStream(clientSocket.getOutputStream());
+            out.writeObject(MessageCode.AD);
+            out.writeObject(deviceID);
             boolean validID = false;
 
             out.writeObject(deviceID);
