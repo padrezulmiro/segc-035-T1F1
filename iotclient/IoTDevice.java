@@ -1,5 +1,6 @@
 package iotclient;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -37,9 +38,9 @@ public class IoTDevice {
 
         // Connection & Authentication
         connectDevice(serverAdress);
-        deviceAuth(userid, password);   // Step 2
-        sendDeviceID(devid);            // Steps 3 + 4
-        testDevice();                   // Steps 5 + 6
+        deviceAuth(userid, password); // Step 2
+        sendDeviceID(devid); // Steps 3 + 4
+        testDevice(); // Steps 5 + 6
         printMenu();
 
         // Program doesn't end until CTRL+C is pressed
@@ -151,18 +152,22 @@ public class IoTDevice {
         throw new UnsupportedOperationException("Unimplemented method 'createDomain'");
     }
 
+    /**
+     * Sends the name and size of the IoTDevice file to the server for remote attestation.
+     */
     private static void testDevice() {
-        // Send IoTDevice file name
-        // Send IoTDevice file size
-        // Receive message
-        MessageCode code;
         try {
-            code = (MessageCode) in.readObject();
+            File iotFile = new File("bin/IoTDevice");
+            // Send IoTDevice file name
+            out.writeObject(iotFile.getName());
+            // Send IoTDevice file size
+            out.writeLong(iotFile.length());
+            // Receive message
+            MessageCode code = (MessageCode) in.readObject();
             switch (code) {
                 case NOK_TESTED:
                     System.out.println(MessageCode.NOK_TESTED.getDesc());
-                    // TODO
-                    // System exit
+                    System.exit(-1);
                     break;
                 case OK_TESTED:
                     System.out.println(MessageCode.OK_TESTED.getDesc());
@@ -172,10 +177,8 @@ public class IoTDevice {
                     break;
             }
         } catch (ClassNotFoundException e) {
-            // TODO Auto-generated catch block
             e.printStackTrace();
         } catch (IOException e) {
-            // TODO Auto-generated catch block
             e.printStackTrace();
         }
     }
