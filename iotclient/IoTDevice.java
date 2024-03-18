@@ -141,9 +141,43 @@ public class IoTDevice {
         throw new UnsupportedOperationException("Unimplemented method 'registerDevice'");
     }
 
-    private static void addUser(String string, String string2) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'addUser'");
+    /**
+     * Asks server to add a specified user to a given domain.
+     * 
+     * @param user
+     * @param domain
+     */
+    private static void addUser(String user, String domain) {
+        try {
+            out.writeObject(user);
+            StringBuilder sb = new StringBuilder()
+                    .append("ADD")
+                    .append(":")
+                    .append(user)
+                    .append(":")
+                    .append(domain);
+            // Send command
+            out.writeObject(sb.toString());
+
+            // Receive message
+            MessageCode code = (MessageCode) in.readObject();
+            switch (code) {
+                case NOPERM:
+                    System.out.println(MessageCode.NOPERM.getDesc());
+                    break;
+                case NODM:
+                    System.out.println(MessageCode.NODM.getDesc());
+                    break;
+                case NOUSER:
+                    System.out.println(MessageCode.NOUSER.getDesc());
+                    break;
+                default:
+                    break;
+            }
+        } catch (IOException | ClassNotFoundException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
     }
 
     /**
@@ -153,7 +187,7 @@ public class IoTDevice {
      */
     private static void createDomain(String dmName) {
         try {
-            out.writeObject(dmName);
+            out.writeObject("CREATE:" + dmName);
             // Receive message
             MessageCode code = (MessageCode) in.readObject();
             switch (code) {
@@ -192,7 +226,6 @@ public class IoTDevice {
                     break;
                 case OK_TESTED:
                     System.out.println(MessageCode.OK_TESTED.getDesc());
-                    // TODO
                     break;
                 default:
                     break;

@@ -16,6 +16,7 @@ public enum MessageCode {
     NODM("NODM # Domain does not exist."),
     NOPERM("NOPERM # User doesn't have read permission."),
     NODATA("NODATA # Device id has no published data."),
+    NOUSER("NOUSER # User does not exist."),
     NOID("NOID # Device id does not exist.");
 
     private String desc;
