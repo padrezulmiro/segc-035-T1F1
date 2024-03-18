@@ -12,10 +12,12 @@ public enum MessageCode {
     NOK_TESTED("NOK_TESTED # Server did not validate."),
     OK_TESTED("OK_TESTED # Server validated."),
     OK("OK"),
+    NOK("NOK"),
     NODM("NODM # Domain does not exist."),
     NOPERM("NOPERM # User doesn't have read permission."),
     NODATA("NODATA # Device id has no published data."),
-    NOID("NOID # Device id does not exist.");
+    NOID("NOID # Device id does not exist."),
+    USEREXISTS("USEREXISTS # User already exists.");
 
     private String desc;
 

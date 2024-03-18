@@ -3,9 +3,13 @@ package iotserver;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.HashMap;
+import java.util.Map;
 
 public class IoTServer {
     private static final int ARG_NUM = 2;
+    public static final Map<String, Domain> DOMAINS = new HashMap<>();
+    public static final Map<String, Device> DEVICES = new HashMap<>();
 
     public static void main(String[] args) {
         if (args.length >= ARG_NUM) {
@@ -18,7 +22,7 @@ public class IoTServer {
         if (args.length == ARG_NUM) {
            portArg = Integer.parseInt(args[1]);
         }
-
+        
         IoTServer server = new IoTServer(portArg);
     }
 
