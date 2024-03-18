@@ -127,9 +127,31 @@ public class IoTDevice {
         throw new UnsupportedOperationException("Unimplemented method 'receiveTemp'");
     }
 
-    private static void sendImage(String string) {
+    private static void sendImage(String imagePath) {
+        try {
+            out.writeObject(MessageCode.EI); // Send opcode
+            sendFile(imagePath);
+            // Receive message
+            MessageCode code = (MessageCode) in.readObject();
+            switch (code) {
+                case OK:
+                    System.out.println(MessageCode.OK.getDesc());
+                    break;
+                case NOK:
+                    System.out.println(MessageCode.NOK.getDesc());
+                    break;
+                default:
+                    break;
+            }
+        } catch (IOException | ClassNotFoundException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+    }
+
+    private static void sendFile(String imagePath) {
         // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'sendImage'");
+        throw new UnsupportedOperationException("Unimplemented method 'sendFile'");
     }
 
     /**
