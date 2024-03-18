@@ -149,7 +149,6 @@ public class IoTDevice {
      */
     private static void addUser(String user, String domain) {
         try {
-            out.writeObject(user);
             StringBuilder sb = new StringBuilder()
                     .append("ADD")
                     .append(":")
