@@ -224,19 +224,24 @@ public class IoTDevice {
     /**
      * Authenticates device on the server.
      * 
-     * @param user
-     * @param password
-     * @param serverAdress
+     * @param user User ID.
+     * @param password User's password.
      */
     private static void deviceAuth(String user, String password) {
 
         try {
             System.out.println("Starting authentication.");
+            // Streams are initialized here.
             in = new ObjectInputStream(clientSocket.getInputStream());
             out = new ObjectOutputStream(clientSocket.getOutputStream());
             boolean auth = false;
 
+            // Send given user and password
+            out.writeObject(user);
+            out.writeObject(password);
+
             do {
+                // Receive code from server
                 MessageCode code = (MessageCode) in.readObject();
                 switch (code) {
                     case WRONG_PWD:
@@ -251,15 +256,16 @@ public class IoTDevice {
                         break;
                     case OK_NEW_USER:
                         System.out.println(MessageCode.OK_NEW_USER.getDesc());
-                        // TODO
+                        System.out.println("You've been registered.");
                         auth = true;
                         break;
                     case OK_USER:
                         System.out.println(MessageCode.OK_USER.getDesc());
-                        // TODO
+                        System.out.println("You've been authenticated.");
                         auth = true;
                         break;
                     default:
+                        System.out.println("Read incorrect code from server.");
                         break;
                 }
             } while (!auth);
@@ -268,11 +274,9 @@ public class IoTDevice {
             System.err.println("ERROR" + e.getMessage());
             System.exit(-1);
         } catch (ClassNotFoundException e) {
-            // TODO Auto-generated catch block
             e.printStackTrace();
             System.exit(-1);
         }
-
     }
 
     /**
