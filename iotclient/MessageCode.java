@@ -17,7 +17,7 @@ public enum MessageCode {
     NOPERM("NOPERM # User doesn't have read permission."),
     NODATA("NODATA # Device id has no published data."),
     NOID("NOID # Device id does not exist."),
-    USEREXISTS("USEREXISTS # User already exists.");    
+    USEREXISTS("USEREXISTS # User already exists in domain."),    
     AU("AU # Authenticate the User user:pwd pair"),
     AD("AD # Authenticate the Device"),
     CREATE("CREATE <dm> # Create domain, user is owner"),
