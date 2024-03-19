@@ -4,8 +4,12 @@ import java.io.File;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.HashMap;
+import java.util.Map;
 
 public class IoTServer {
+    public static final Map<String, Domain> DOMAINS = new HashMap<>();
+    public static final Map<String, Device> DEVICES = new HashMap<>();
     private static final int ARG_NUM = 1;
 
     public static void main(String[] args) {
@@ -20,7 +24,7 @@ public class IoTServer {
             System.err.println("IoTServer runs with at most 1 argument: a port number.");
             System.exit(-1);
         }
-
+        
         IoTServer server = new IoTServer(portArg);
     }
 

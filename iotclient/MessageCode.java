@@ -12,11 +12,12 @@ public enum MessageCode {
     NOK_TESTED("NOK_TESTED # Server did not validate."),
     OK_TESTED("OK_TESTED # Server validated."),
     OK("OK"),
+    NOK("NOK"),
     NODM("NODM # Domain does not exist."),
     NOPERM("NOPERM # User doesn't have read permission."),
     NODATA("NODATA # Device id has no published data."),
     NOID("NOID # Device id does not exist."),
-    
+    USEREXISTS("USEREXISTS # User already exists in domain."),    
     AU("AU # Authenticate the User user:pwd pair"),
     AD("AD # Authenticate the Device"),
     CREATE("CREATE <dm> # Create domain, user is owner"),
@@ -26,6 +27,7 @@ public enum MessageCode {
     EI("EI <filename.jpg> # Enviar Image <filename.jpg> to the server"),
     RT("RT <dm> # Receive the latest Temperatures for every device of domain <dm>, as long as user has permission"),
     RI("RI <user-id>:<dev-id> # Receive Image file from <user-id>:<dev-id>, as long as user has permission.");
+
 
     private String desc;
 
