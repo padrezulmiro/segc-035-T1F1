@@ -1,5 +1,6 @@
 package iotserver;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -7,20 +8,21 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class IoTServer {
-    private static final int ARG_NUM = 2;
     public static final Map<String, Domain> DOMAINS = new HashMap<>();
     public static final Map<String, Device> DEVICES = new HashMap<>();
+    private static final int ARG_NUM = 1;
 
     public static void main(String[] args) {
-        if (args.length >= ARG_NUM) {
-            System.err.println("IoTServer runs with at most 1 argument: a port" +
-                               "number.");
-            System.exit(-1);
-        }
 
         int portArg = 12345;
         if (args.length == ARG_NUM) {
-           portArg = Integer.parseInt(args[1]);
+           portArg = Integer.parseInt(args[0]);
+           System.out.println("IoTServer runs with port: " + portArg);
+        }else if (args.length == 0){
+            System.out.println("IoTServer runs with default port: 12345");
+        }else{
+            System.err.println("IoTServer runs with at most 1 argument: a port number.");
+            System.exit(-1);
         }
         
         IoTServer server = new IoTServer(portArg);
@@ -45,7 +47,8 @@ public class IoTServer {
         }
 
         while (true) {
-            try (Socket connection = socket.accept()) {
+            try{
+                Socket connection = socket.accept();
                 ServerThread thread = new ServerThread(connection);
                 thread.start();
             } catch (IOException e) {
