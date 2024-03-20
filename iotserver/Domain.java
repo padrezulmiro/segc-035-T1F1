@@ -43,4 +43,8 @@ public class Domain {
     public boolean isDeviceRegistered(String device) {
         return devices.contains(device);
     }
+    
+    public String getName(){
+        return name;
+    }
 }
