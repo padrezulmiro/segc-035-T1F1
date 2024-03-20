@@ -136,9 +136,36 @@ public class IoTDevice {
         }
     }
 
-    private static void receiveImage(String string) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'receiveImage'");
+    private static void receiveImage(String device) {
+        try {
+            out.writeObject(MessageCode.RI); // Send opcode
+            out.writeObject(device);
+            // Receive message
+            MessageCode code = (MessageCode) in.readObject();
+            switch (code) {
+                case OK:
+                    Long fileSize = in.readLong(); // Read file size
+                    String[] dev = device.split(":");
+                    String fileName = "Img_" + dev[0] + "_" + dev[1] + ".jpg";
+                    receiveFile(fileSize, fileName);
+                    System.out.println(MessageCode.OK.getDesc() + ", " + fileSize + " (long)"); // TODO
+                    break;
+                case NODATA:
+                    System.out.println(MessageCode.NODATA.getDesc());
+                    break;
+                case NODM:
+                    System.out.println(MessageCode.NODM.getDesc());
+                    break;
+                case NOPERM:
+                    System.out.println(MessageCode.NOPERM.getDesc());
+                    break;
+                default:
+                    break;
+            }
+        } catch (IOException | ClassNotFoundException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
     }
 
     private static void receiveTemp(String domain) {
@@ -150,7 +177,7 @@ public class IoTDevice {
             switch (code) {
                 case OK:
                     Long fileSize = in.readLong(); // Read file size
-                    String fileName = "Temps_" + domain;
+                    String fileName = "Temps_" + domain + ".txt";
                     receiveFile(fileSize, fileName);
                     System.out.println(MessageCode.OK.getDesc() + ", " + fileSize + " (long)"); // TODO
                     break;
