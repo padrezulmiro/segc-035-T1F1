@@ -27,7 +27,8 @@ public enum MessageCode {
     ET("ET <float> # Enviar Temperature <float> to the server"),
     EI("EI <filename.jpg> # Enviar Image <filename.jpg> to the server"),
     RT("RT <dm> # Receive the latest Temperatures for every device of domain <dm>, as long as user has permission"),
-    RI("RI <user-id>:<dev-id> # Receive Image file from <user-id>:<dev-id>, as long as user has permission.");
+    RI("RI <user-id>:<dev-id> # Receive Image file from <user-id>:<dev-id>, as long as user has permission."),
+    STOP("STOP # Client has been shut down.");
 
 
     private String desc;
