@@ -22,6 +22,7 @@ public class IoTDevice {
     static ObjectOutputStream out;
 
     public static void main(String[] args) {
+        addCliShutdownHook();
         Scanner sc = new Scanner(System.in);
         // Check arguments
         if (args.length < 3) {
@@ -50,6 +51,13 @@ public class IoTDevice {
                 executeCommand(command);
             }
         }
+    }
+
+    private static void addCliShutdownHook() {
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> 
+            System.out.println("\nCaught Ctrl-C. Shuting down.")
+            // SEND SHUTDOWN CODE HERE
+        ));
     }
 
     /**
