@@ -1,12 +1,15 @@
 package iotclient;
 
 import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.io.OutputStream;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.Scanner;
@@ -147,16 +150,50 @@ public class IoTDevice {
             switch (code) {
                 case OK:
                     Long fileSize = in.readLong(); // Read file size
-                    // receiveFile();
+                    String fileName = "Temps_" + domain;
+                    receiveFile(fileSize, fileName);
                     System.out.println(MessageCode.OK.getDesc() + ", " + fileSize + " (long)"); // TODO
                     break;
-                case NOK:
-                    System.out.println(MessageCode.NOK.getDesc());
+                case NODATA:
+                    System.out.println(MessageCode.NODATA.getDesc());
+                    break;
+                case NODM:
+                    System.out.println(MessageCode.NODM.getDesc());
+                    break;
+                case NOPERM:
+                    System.out.println(MessageCode.NOPERM.getDesc());
                     break;
                 default:
                     break;
             }
         } catch (IOException | ClassNotFoundException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+    }
+
+    private static void receiveFile(Long fileSize, String path) {
+        try {
+            File f = new File(path);
+            f.createNewFile();
+
+            FileOutputStream fout = new FileOutputStream(f);
+            OutputStream output = new BufferedOutputStream(fout);
+
+            int bytesWritten = 0;
+            byte[] buffer = new byte[1024];
+
+            while (fileSize > bytesWritten) {
+                int bytesRead = in.read(buffer, 0, 1024);
+                output.write(buffer, 0, bytesRead);
+                output.flush();
+                fout.flush();
+                bytesWritten += bytesRead;
+                System.out.println(bytesWritten);
+            }
+            output.close();
+            fout.close();
+        } catch (IOException e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
         }
@@ -171,7 +208,6 @@ public class IoTDevice {
             switch (code) {
                 case OK:
                     System.out.println(MessageCode.OK.getDesc());
-                    // TODO PRINT INFO
                     break;
                 case NOK:
                     System.out.println(MessageCode.NOK.getDesc());
