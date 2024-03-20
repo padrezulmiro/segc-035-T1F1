@@ -136,6 +136,10 @@ public class IoTDevice {
         }
     }
 
+    /**
+     * 
+     * @param device
+     */
     private static void receiveImage(String device) {
         try {
             out.writeObject(MessageCode.RI); // Send opcode
@@ -199,6 +203,12 @@ public class IoTDevice {
         }
     }
 
+    /**
+     * Receive's a file from the server.
+     * 
+     * @param fileSize File size.
+     * @param path File path
+     */
     private static void receiveFile(Long fileSize, String path) {
         try {
             File f = new File(path);
@@ -248,6 +258,11 @@ public class IoTDevice {
         }
     }
 
+    /**
+     * Sends a file to the server.
+     * 
+     * @param path File path
+     */
     private static void sendFile(String path) {
         File f = new File("client\\" + path);
         long fileSize = f.length();
@@ -262,7 +277,6 @@ public class IoTDevice {
             byte[] buffer = new byte[1024];
             while (fileSize > bytesSent) {
                 int bytesRead = input.read(buffer, 0, 1024);
-                System.out.println("Enviados " + bytesRead + " bytes.");
                 bytesSent += bytesRead;
                 out.write(buffer, 0, bytesRead);
                 out.flush();
