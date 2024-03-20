@@ -54,10 +54,15 @@ public class IoTDevice {
     }
 
     private static void addCliShutdownHook() {
-        Runtime.getRuntime().addShutdownHook(new Thread(() -> 
-            System.out.println("\nCaught Ctrl-C. Shuting down.")
-            // SEND SHUTDOWN CODE HERE
-        ));
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            System.out.println("\nCaught Ctrl-C. Shuting down.");
+            try {
+                out.writeObject(MessageCode.STOP);
+            } catch (IOException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            }
+        }));
     }
 
     /**
@@ -139,15 +144,15 @@ public class IoTDevice {
             switch (code) {
                 case OK:
                     Long fileSize = in.readLong(); // Read file size
-                    //receiveFile();
-                    System.out.println(MessageCode.OK.getDesc() + ", " +fileSize+ " (long)" ); // TODO
+                    // receiveFile();
+                    System.out.println(MessageCode.OK.getDesc() + ", " + fileSize + " (long)"); // TODO
                     break;
                 case NOK:
                     System.out.println(MessageCode.NOK.getDesc());
                     break;
                 default:
                     break;
-            }             
+            }
         } catch (IOException | ClassNotFoundException e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
