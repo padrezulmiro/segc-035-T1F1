@@ -1,7 +1,10 @@
 package iotclient;
 
+import java.io.BufferedInputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
@@ -168,6 +171,7 @@ public class IoTDevice {
             switch (code) {
                 case OK:
                     System.out.println(MessageCode.OK.getDesc());
+                    // TODO PRINT INFO
                     break;
                 case NOK:
                     System.out.println(MessageCode.NOK.getDesc());
@@ -181,9 +185,31 @@ public class IoTDevice {
         }
     }
 
-    private static void sendFile(String imagePath) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'sendFile'");
+    private static void sendFile(String path) {
+        File f = new File("client\\" + path);
+        long fileSize = f.length();
+        try {
+            // Send file size
+            out.writeLong(fileSize);
+
+            FileInputStream fin = new FileInputStream(f);
+            InputStream input = new BufferedInputStream(fin);
+            // Send file
+            int bytesSent = 0;
+            byte[] buffer = new byte[1024];
+            while (fileSize > bytesSent) {
+                int bytesRead = input.read(buffer, 0, 1024);
+                System.out.println("Enviados " + bytesRead + " bytes.");
+                bytesSent += bytesRead;
+                out.write(buffer, 0, bytesRead);
+                out.flush();
+            }
+            input.close();
+            fin.close();
+        } catch (IOException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
     }
 
     /**
