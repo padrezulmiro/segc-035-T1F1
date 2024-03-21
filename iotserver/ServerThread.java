@@ -33,7 +33,7 @@ public class ServerThread extends Thread {
                     case AU:
                         String user = (String)in.readObject();
                         String pwd = (String)in.readObject();
-                        out.writeObject(manager.authenticateUser(user,pwd));
+                        out.writeObject(manager.authenticateUser(user,pwd).responseCode());
                         break;
                     case AD:
                         String deviceID = (String)in.readObject();

@@ -15,11 +15,8 @@ public class Device {
     private Float temp;
     private Set<String> registeredDomains;
 
-    private ServerManager serverManager;
-
     public Device(String fullId) {
         this(fullId.split(":")[0], fullId.split(":")[1]);
-        serverManager = ServerManager.getInstance();
     }
 
     public Device(String userId, String devId) {
@@ -30,7 +27,6 @@ public class Device {
         this.imgPath = null;
         this.temp = null;
         this.registeredDomains = new HashSet<>();
-        serverManager = ServerManager.getInstance();
     }
 
     public boolean isOnline() {
@@ -55,7 +51,6 @@ public class Device {
 
     public void registerInDomain(String domainName) {
         registeredDomains.add(domainName);
-        // serverManager.DOMAINS.get(domainName).registerDevice(fullId);
     }
 
     public void registerTemperature(float temperature) {
