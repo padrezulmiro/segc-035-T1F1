@@ -12,7 +12,7 @@ public class Device {
 
     private boolean online;
     private String imgPath;
-    private List<Float> temperatures;
+    private Float temp;
     private Set<String> registeredDomains;
 
     public Device(String fullId) {
@@ -25,7 +25,7 @@ public class Device {
         this.fullId = userId + ":" + devId;
         this.online = false;
         this.imgPath = null;
-        this.temperatures = new ArrayList<>();
+        this.temp = null;
         this.registeredDomains = new HashSet<>();
     }
 
@@ -51,11 +51,10 @@ public class Device {
 
     public void registerInDomain(String domainName) {
         registeredDomains.add(domainName);
-        IoTServer.DOMAINS.get(domainName).registerDevice(fullId);
     }
 
     public void registerTemperature(float temperature) {
-        temperatures.add(temperature);
+        temp = temperature;
     }
 
     @Override

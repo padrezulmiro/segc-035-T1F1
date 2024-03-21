@@ -5,7 +5,7 @@ SERVER_SRC := Device \
 Domain \
 IoTServer \
 ServerThread \
-ClientMediator \
+ServerManager \
 ServerResponse
 
 BIN_DIR := bin

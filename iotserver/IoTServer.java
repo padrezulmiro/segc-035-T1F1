@@ -8,8 +8,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class IoTServer {
-    public static final Map<String, Domain> DOMAINS = new HashMap<>();
-    public static final Map<String, Device> DEVICES = new HashMap<>();
+    public static final ServerManager SERVERMANAGER = ServerManager.getInstance();
     private static final int ARG_NUM = 1;
 
     public static void main(String[] args) {

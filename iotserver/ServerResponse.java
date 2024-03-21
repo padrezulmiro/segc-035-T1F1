@@ -6,7 +6,7 @@ import java.io.FileNotFoundException;
 import java.io.InputStream;
 import iotclient.MessageCode;
 
-public class ServerResponse {
+public class ServerResponse  {
     private MessageCode code;
     private long fileSize;
     private InputStream fileStream;
