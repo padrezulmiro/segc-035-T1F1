@@ -1,5 +1,6 @@
 package iotserver;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -13,22 +14,26 @@ public class ServerThread extends Thread {
     private ObjectOutputStream out;
     private ObjectInputStream in;
     private ServerManager manager;
-    private String user = null;
-    private String deviceID = null;
-    private boolean isRunning = true;
+    private String user;
+    private String deviceID;
+    private boolean isRunning;
 
     public ServerThread(Socket socket) {
         this.socket = socket;
-        
+        this.user = null;
+        // this.deviceID = null;
+        this.isRunning = true;
     }
 
     public void run() { 
         System.out.println("Accepted connection!");
 
         try {
+
             out = new ObjectOutputStream(socket.getOutputStream());
             in = new ObjectInputStream(socket.getInputStream()); //socket is closed here
             manager = ServerManager.getInstance();
+            MessageCode res;
 
             while(isRunning){
                 MessageCode opcode = (MessageCode) in.readObject();
@@ -42,13 +47,16 @@ public class ServerThread extends Thread {
                         break;
                     case AD:
                         String deviceID = (String)in.readObject();
-                        out.writeObject(manager.authenticateDevice(user,deviceID).responseCode());
+                        res = manager.authenticateDevice(user,deviceID).responseCode();
+                        if(res == MessageCode.OK_DEVID){this.deviceID = deviceID;}
+                        out.writeObject(res);
                         break;
                     case TD:
                         String fileName = (String)in.readObject();
-                        Long fileSize = null;//in.readLong();
-                        System.out.println("Correct");
-                        out.writeObject(manager.testDevice(fileName, fileSize).responseCode());
+                        long fileSize = (long)in.readLong();
+                        res = manager.testDevice(fileName, fileSize).responseCode();
+                        out.writeObject(res);
+                        // System.out.println("Correct " + res + "filename=" + fileName + " size=" + fileSize);
                         break;
                     case CREATE:
                         break;

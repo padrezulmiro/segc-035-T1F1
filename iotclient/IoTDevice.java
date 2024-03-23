@@ -62,7 +62,7 @@ public class IoTDevice {
 
     private static void addCliShutdownHook() {
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            System.out.println("\nCaught Ctrl-C. Shuting down.");
+            System.out.println("\nCaught Ctrl-C. Shutting down.");
             try {
                 out.writeObject(MessageCode.STOP);
             } catch (IOException e) {
@@ -410,14 +410,17 @@ public class IoTDevice {
      */
     private static void testDevice() {
         try {
-            File iotFile = new File("bin/IoTDevice");
+            File iotFile = new File("./bin/iotclient/IoTDevice.class");
             // Send Test Device message
             out.writeObject(MessageCode.TD);
             // Send IoTDevice file name
             out.writeObject(iotFile.getName());
             // Send IoTDevice file size
-            // out.writeLong((Long)iotFile.length());
+            out.writeLong(iotFile.length());
+            // Long mock_size = (long) 3;
+            // out.writeLong(mock_size);
             // Receive message
+            out.flush();
             MessageCode code = (MessageCode) in.readObject();
             switch (code) {
                 case NOK_TESTED:

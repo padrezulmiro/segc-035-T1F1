@@ -59,7 +59,7 @@ public class ServerManager {
             if (instance == null) {
                 try {
                     instance = new ServerManager();
-
+                    
                     userRecord = initializeFile(userFilePath);
                     userReader = new BufferedReader(new FileReader(userRecord));
                     userWriter = new BufferedWriter(new FileWriter(userRecord,true));
@@ -284,8 +284,7 @@ public class ServerManager {
         return new ServerResponse(MessageCode.OK_DEVID);
     }
 
-    public synchronized ServerResponse testDevice(String devFileName, Long devFileSize)throws IOException{
-        // TODO, 
+    public synchronized ServerResponse testDevice(String devFileName, long devFileSize)throws IOException{
         return new ServerResponse(MessageCode.OK_TESTED);
     }
 }
