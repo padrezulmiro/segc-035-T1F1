@@ -25,8 +25,8 @@ public class ServerManager {
     private static final String userFilePath = "user.txt";
 
     //TODO: fill this in?
-    private static final String clientFileName = "IoTDevice";
-    private static final Long clientFileSize = (long) 0;
+    private static String clientFileName;
+    private static Long clientFileSize;
 
     // user/domain files
     private static File userRecord;
@@ -38,6 +38,7 @@ public class ServerManager {
     // private static Scanner domainScanner;
     private static BufferedReader domainReader;
     private static BufferedWriter domainWriter;
+
     
 
     private ServerManager(){
@@ -59,7 +60,16 @@ public class ServerManager {
             if (instance == null) {
                 try {
                     instance = new ServerManager();
-                    
+
+                    File clientFile = new File("./bin/iotclient/IoTDevice.class");
+                    // File clientDataFile = new File(clientDataPath);
+                    clientFileName = clientFile.getName();
+                    clientFileSize = clientFile.length();
+                    // FileWriter wr = new FileWriter(clientDataFile);
+                    // wr.write(clientFile.getName());
+                    // wr.write( Long.toString(clientFile.length()));
+                    // wr.close();
+
                     userRecord = initializeFile(userFilePath);
                     userReader = new BufferedReader(new FileReader(userRecord));
                     userWriter = new BufferedWriter(new FileWriter(userRecord,true));
@@ -285,6 +295,9 @@ public class ServerManager {
     }
 
     public synchronized ServerResponse testDevice(String devFileName, long devFileSize)throws IOException{
-        return new ServerResponse(MessageCode.OK_TESTED);
+        if (devFileName.equals(clientFileName) && devFileSize==clientFileSize){
+            return new ServerResponse(MessageCode.OK_TESTED);
+        }
+        return new ServerResponse(MessageCode.NOK_TESTED);
     }
 }
