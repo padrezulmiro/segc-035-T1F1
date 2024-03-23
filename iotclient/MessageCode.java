@@ -21,6 +21,7 @@ public enum MessageCode {
     USEREXISTS("USEREXISTS # User already exists in domain."),    
     AU("AU # Authenticate the User user:pwd pair"),
     AD("AD # Authenticate the Device"),
+    TD("TD # Test the Device"),
     CREATE("CREATE <dm> # Create domain, user is owner"),
     ADD("ADD <user1> <dm> # add <user1> to <dm>"),
     RD("Register the current Device in the <dm>"),

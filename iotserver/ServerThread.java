@@ -13,6 +13,9 @@ public class ServerThread extends Thread {
     private ObjectOutputStream out;
     private ObjectInputStream in;
     private ServerManager manager;
+    private String user = null;
+    private String deviceID = null;
+    private boolean isRunning = true;
 
     public ServerThread(Socket socket) {
         this.socket = socket;
@@ -27,16 +30,25 @@ public class ServerThread extends Thread {
             in = new ObjectInputStream(socket.getInputStream()); //socket is closed here
             manager = ServerManager.getInstance();
 
-            while(true){
+            while(isRunning){
                 MessageCode opcode = (MessageCode) in.readObject();
                 switch (opcode) {
                     case AU:
-                        String user = (String)in.readObject();
+                        if (this.user==null){
+                            this.user = (String)in.readObject();
+                        }
                         String pwd = (String)in.readObject();
                         out.writeObject(manager.authenticateUser(user,pwd).responseCode());
                         break;
                     case AD:
                         String deviceID = (String)in.readObject();
+                        out.writeObject(manager.authenticateDevice(user,deviceID).responseCode());
+                        break;
+                    case TD:
+                        String fileName = (String)in.readObject();
+                        Long fileSize = null;//in.readLong();
+                        System.out.println("Correct");
+                        out.writeObject(manager.testDevice(fileName, fileSize).responseCode());
                         break;
                     case CREATE:
                         break;
@@ -51,6 +63,10 @@ public class ServerThread extends Thread {
                     case RT:
                         break;
                     case RI:
+                        break;
+                    case STOP:
+                        System.out.println("Client quits. killing thread");
+                        isRunning = false;
                         break;
                 }
             }

@@ -24,6 +24,10 @@ public class ServerManager {
     private static final String domainFilePath = "domain.txt";
     private static final String userFilePath = "user.txt";
 
+    //TODO: fill this in?
+    private static final String clientFileName = "IoTDevice";
+    private static final Long clientFileSize = (long) 0;
+
     // user/domain files
     private static File userRecord;
     // private static Scanner userScanner;
@@ -58,13 +62,15 @@ public class ServerManager {
 
                     userRecord = initializeFile(userFilePath);
                     userReader = new BufferedReader(new FileReader(userRecord));
-                    userWriter = new BufferedWriter(new FileWriter(userRecord));
+                    userWriter = new BufferedWriter(new FileWriter(userRecord,true));
+                    // why would this empty it all.
+                    // ref: https://stackoverflow.com/questions/17244713/using-filewriter-and-bufferedwriter-clearing-file-for-some-reason
                     readUsersFile();
                     userReader.close();
                     
                     domainRecord = initializeFile(domainFilePath);
                     domainReader = new BufferedReader(new FileReader(domainRecord));
-                    domainWriter = new BufferedWriter(new FileWriter(domainRecord));
+                    domainWriter = new BufferedWriter(new FileWriter(domainRecord,true));
                     readDomainsFile();
                     domainReader.close();
                 } catch (IOException e) {
@@ -113,7 +119,8 @@ public class ServerManager {
         }
     }
 
-    synchronized public ServerResponse registerDevice(String userId, String domainName, String device) {
+    // devID being ID
+    synchronized public ServerResponse registerDeviceInDomain(String userId, String domainName, String devId) {
         if (!domainExists(domainName)) {
             return new ServerResponse(MessageCode.NODM);
         }
@@ -122,8 +129,10 @@ public class ServerManager {
         if (!domain.isRegistered(userId)) {
             return new ServerResponse(MessageCode.NOPERM);
         }
-        ServerManager.DEVICES.get(device).registerInDomain(domainName); // XXX: i dont like this :|
-        domain.registerDevice(device);
+
+        String fullDevId = userId + ":" + devId;
+        ServerManager.DEVICES.get(fullDevId).registerInDomain(domainName); // XXX: i dont like this :|
+        domain.registerDevice(fullDevId);
         ServerManager.DOMAINS.replace(domainName,domain);
         updateDomainsFile();
         return new ServerResponse(MessageCode.OK);
@@ -164,9 +173,14 @@ public class ServerManager {
 
     public static File initializeFile(String filename) throws IOException{
         File fileCreated = new File(filename);
-        if (fileCreated.createNewFile()) {
+        if(!fileCreated.exists() ){
+            fileCreated.createNewFile();
             System.out.println("File created: " + fileCreated.getName());
         }
+        // System.out.println("generated new file:" + fileCreated.getName());
+        // if (!fileCreated.exists() && fileCreated.createNewFile()) {
+        //     System.out.println("File created: " + fileCreated.getName());
+        // }
         return fileCreated;
     }
 
@@ -176,8 +190,14 @@ public class ServerManager {
         return true;
     }
 
-    synchronized public boolean updateUsersFile(){
+    synchronized public boolean updateUsersFile() throws IOException{
         // writes updated USERS to file
+        // userWriter.write(user+":"+pwd+"\n");
+        // userWriter.flush();
+        for(Map.Entry<String,String> entry : USERS.entrySet()){
+           userWriter.write(entry.getKey()+":"+entry.getValue());
+           userWriter.flush();
+        }
         return true; 
     }
 
@@ -219,11 +239,14 @@ public class ServerManager {
      *AUTHENTICATION====================================================================================================================
      */
 
-    synchronized public ServerResponse registerUser(String user, String pwd) throws IOException{
-        userWriter.write(user+":"+pwd+"\n");
-        userWriter.flush();
+    synchronized public void registerUser(String user, String pwd) throws IOException{
+        USERS.put(user, pwd);
         updateUsersFile();
-        return null;
+    }
+
+    synchronized public void registerDevice(String fullDevId, Device dev) throws IOException{
+        dev.goOnline();
+        DEVICES.put(fullDevId,dev);
     }
 
     public synchronized ServerResponse authenticateUser(String user, String pwd)throws IOException{
@@ -240,5 +263,29 @@ public class ServerManager {
 
     synchronized private boolean userExists(String userID) {
         return USERS.containsKey(userID);
+    }
+
+    //assumes userId exists
+    public synchronized ServerResponse authenticateDevice(String userId, String devId)throws IOException{
+        String fullDevId = userId + ":" + devId;
+        if(DEVICES.containsKey(fullDevId)){
+            Device dev = DEVICES.get(fullDevId);
+            System.out.println("devid:" + fullDevId);
+            if(dev.isOnline()){
+                System.out.println("dev is online");
+                return new ServerResponse(MessageCode.NOK_DEVID);
+            }else{
+                registerDevice(fullDevId,dev);
+                return new ServerResponse(MessageCode.OK_DEVID);
+            }
+        }
+        Device dev = new Device(fullDevId);
+        registerDevice(fullDevId,dev);
+        return new ServerResponse(MessageCode.OK_DEVID);
+    }
+
+    public synchronized ServerResponse testDevice(String devFileName, Long devFileSize)throws IOException{
+        // TODO, 
+        return new ServerResponse(MessageCode.OK_TESTED);
     }
 }
