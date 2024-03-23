@@ -27,9 +27,10 @@ public class IoTDevice {
     static ObjectInputStream in;
     static ObjectOutputStream out;
 
+    private static Scanner sc;
     public static void main(String[] args) {
         addCliShutdownHook();
-        Scanner sc = new Scanner(System.in);
+        sc = new Scanner(System.in);
         // Check arguments
         if (args.length < 3) {
             System.out.println(
@@ -61,7 +62,7 @@ public class IoTDevice {
 
     private static void addCliShutdownHook() {
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            System.out.println("\nCaught Ctrl-C. Shuting down.");
+            System.out.println("\nCaught Ctrl-C. Shutting down.");
             try {
                 out.writeObject(MessageCode.STOP);
             } catch (IOException e) {
@@ -409,12 +410,17 @@ public class IoTDevice {
      */
     private static void testDevice() {
         try {
-            File iotFile = new File("bin/IoTDevice");
+            File iotFile = new File("./bin/iotclient/IoTDevice.class");
+            // Send Test Device message
+            out.writeObject(MessageCode.TD);
             // Send IoTDevice file name
             out.writeObject(iotFile.getName());
             // Send IoTDevice file size
             out.writeLong(iotFile.length());
+            // Long mock_size = (long) 3;
+            // out.writeLong(mock_size);
             // Receive message
+            out.flush();
             MessageCode code = (MessageCode) in.readObject();
             switch (code) {
                 case NOK_TESTED:
@@ -499,8 +505,8 @@ public class IoTDevice {
             boolean auth = false;
 
             // Send given user and password
-            out.writeObject(user);
-            out.writeObject(password);
+            // out.writeObject(user);
+            // out.writeObject(password);
 
             do {
                 // Receive code from server
@@ -510,10 +516,11 @@ public class IoTDevice {
                         System.out.println(MessageCode.WRONG_PWD.getDesc());
                         // Wrong password. Try again.
                         // Server waits for another password and resends a message code
-                        Scanner sc = new Scanner(System.in);
+                        // Scanner sc = new Scanner(System.in);
                         System.out.println("Password:");
                         String newPassword = sc.nextLine();
-                        sc.close();
+                        // sc.close();
+                        out.writeObject(MessageCode.AU);
                         out.writeObject(newPassword);
                         break;
                     case OK_NEW_USER:
@@ -553,7 +560,7 @@ public class IoTDevice {
             out.writeObject(deviceID);
             boolean validID = false;
 
-            out.writeObject(deviceID);
+            // out.writeObject(deviceID); //probably only once
 
             do {
                 MessageCode code = (MessageCode) in.readObject();
@@ -561,10 +568,11 @@ public class IoTDevice {
                     case NOK_DEVID:
                         System.out.println(MessageCode.NOK_DEVID.getDesc());
 
-                        Scanner sc = new Scanner(System.in);
+                        // Scanner sc = new Scanner(System.in);
                         System.out.println("New device ID:");
                         String newID = sc.nextLine();
-                        sc.close();
+                        // sc.close();
+                        out.writeObject(MessageCode.AD);
                         out.writeObject(newID);
                         break;
                     case OK_DEVID:

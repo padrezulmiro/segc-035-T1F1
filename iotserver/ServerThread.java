@@ -1,5 +1,6 @@
 package iotserver;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -13,30 +14,49 @@ public class ServerThread extends Thread {
     private ObjectOutputStream out;
     private ObjectInputStream in;
     private ServerManager manager;
+    private String user;
+    private String deviceID;
+    private boolean isRunning;
 
     public ServerThread(Socket socket) {
         this.socket = socket;
-        
+        this.user = null;
+        // this.deviceID = null;
+        this.isRunning = true;
     }
 
     public void run() { 
         System.out.println("Accepted connection!");
 
         try {
+
             out = new ObjectOutputStream(socket.getOutputStream());
             in = new ObjectInputStream(socket.getInputStream()); //socket is closed here
             manager = ServerManager.getInstance();
+            MessageCode res;
 
-            while(true){
+            while(isRunning){
                 MessageCode opcode = (MessageCode) in.readObject();
                 switch (opcode) {
                     case AU:
-                        String user = (String)in.readObject();
+                        if (this.user==null){
+                            this.user = (String)in.readObject();
+                        }
                         String pwd = (String)in.readObject();
                         out.writeObject(manager.authenticateUser(user,pwd).responseCode());
                         break;
                     case AD:
                         String deviceID = (String)in.readObject();
+                        res = manager.authenticateDevice(user,deviceID).responseCode();
+                        if(res == MessageCode.OK_DEVID){this.deviceID = deviceID;}
+                        out.writeObject(res);
+                        break;
+                    case TD:
+                        String fileName = (String)in.readObject();
+                        long fileSize = (long)in.readLong();
+                        res = manager.testDevice(fileName, fileSize).responseCode();
+                        out.writeObject(res);
+                        // System.out.println("Correct " + res + "filename=" + fileName + " size=" + fileSize);
                         break;
                     case CREATE:
                         break;
@@ -51,6 +71,10 @@ public class ServerThread extends Thread {
                     case RT:
                         break;
                     case RI:
+                        break;
+                    case STOP:
+                        System.out.println("Client quits. killing thread");
+                        isRunning = false;
                         break;
                 }
             }
