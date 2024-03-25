@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import iohelper.FileHelper;
 
 public class Device {
     private String userId;
@@ -46,6 +47,7 @@ public class Device {
     }
 
     public void registerImage(String imgPath) {
+        this.imgPath=imgPath;
         throw new UnsupportedOperationException();
     }
 
@@ -55,6 +57,18 @@ public class Device {
 
     public void registerTemperature(float temperature) {
         temp = temperature;
+    }
+
+    public String getFilepath(){
+        return this.imgPath;
+    }
+
+    public Set<String> getDomains(){
+        return this.registeredDomains;
+    }
+
+    public float getTemperature(){
+        return this.temp;
     }
 
     @Override
