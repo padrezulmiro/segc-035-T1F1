@@ -47,4 +47,21 @@ public class Domain {
     public String getName(){
         return name;
     }
+
+    @Override
+    public String toString() {
+        final char NL = '\n';
+        final char TAB = '\t';
+        final char SP = ':';
+
+        StringBuilder sb = new StringBuilder();
+        sb.append(getName() + SP + ownerId + NL);
+
+        for (String devFullId : devices) {
+            Device deviceObj = ServerManager.DEVICES.get(devFullId);
+            sb.append(TAB + deviceObj.toString());
+        }
+
+        return sb.toString();
+    }
 }
