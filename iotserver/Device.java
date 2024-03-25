@@ -63,6 +63,14 @@ public class Device {
         return this.imgPath;
     }
 
+    public Set<String> getDomains(){
+        return this.registeredDomains;
+    }
+
+    public float getTemperature(){
+        return this.temp;
+    }
+
     @Override
     public boolean equals(Object obj) {
         if (obj == this) return true;

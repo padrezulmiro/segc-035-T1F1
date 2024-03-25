@@ -7,9 +7,12 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.ObjectInputStream;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
 
 import iotclient.MessageCode;
 
@@ -75,7 +78,7 @@ public class ServerManager {
 
                     userRecord = initializeFile(userFilePath);
                     userReader = new BufferedReader(new FileReader(userRecord));
-                    userWriter = new BufferedWriter(new FileWriter(userRecord));
+                    // userWriter = new BufferedWriter(new FileWriter(userRecord,true));
                     // why would this empty it all.
                     // ref: https://stackoverflow.com/questions/17244713/using-filewriter-and-bufferedwriter-clearing-file-for-some-reason
                     readUsersFile();
@@ -104,6 +107,7 @@ public class ServerManager {
         }
         Domain domain = new Domain(domainName, clientUID);
         ServerManager.DOMAINS.put(domainName, domain); 
+        System.out.println(Arrays.asList(DOMAINS)); //print debug domain set, feel free to delete
         updateDomainsFile();
 
         return new ServerResponse(MessageCode.OK);
@@ -202,34 +206,65 @@ public class ServerManager {
             return new ServerResponse(MessageCode.NODM); 
         }
         if (dom.isRegistered(user)){
-            List<Float> temps = dom.getTempList();
-            // write into File
-            String tempFilePath = temperatureDirectoryPath+"temps_" + domainName + ".txt";
-            File tempFile = new File(tempFilePath);
-            BufferedWriter tempWriter = new BufferedWriter(new FileWriter(tempFile));
-            for(Float f : temps){
-                tempWriter.write(Float.toString(f)+System.getProperty ("line.separator"));
-                tempWriter.flush();
-            }
-            tempWriter.close();
+            Map<String,Float> temps = getTempList(dom);
+            // // write into File
+            // String tempFilePath = temperatureDirectoryPath+"temps_" + domainName + ".txt";
+            // File tempFile = new File(tempFilePath);
+            // BufferedWriter tempWriter = new BufferedWriter(new FileWriter(tempFile));
 
-            // FileHelper.sendFile(tempFilePath, out);
-            return new ServerResponse(MessageCode.OK,tempFilePath);
-        }else return new ServerResponse(MessageCode.NOPERM);
+            // for(Entry<String, Float> entry : temps.entrySet()){
+            //     tempWriter.write(entry.getKey() + ":" + entry.getValue() +System.getProperty ("line.separator"));
+            //     tempWriter.flush();
+
+            // tempWriter.close();
+
+            // // FileHelper.sendFile(tempFilePath, out);
+            // return new ServerResponse(MessageCode.OK,tempFilePath);
+            return new ServerResponse(MessageCode.OK,temps);
+        }
+        return new ServerResponse(MessageCode.NOPERM);
     }
 
-    synchronized public ServerResponse getImage(String targetUserId, String targetDevId) {
+    synchronized public ServerResponse getImage(String user,String targetUserId, String targetDevId) {
         String targetDevFullId = targetUserId + ":" + targetDevId;
         Device dev = DEVICES.get(targetDevFullId);
         if (dev == null){
-            return  new ServerResponse(MessageCode.NOID);
+            return new ServerResponse(MessageCode.NOID);
         }
-        String filepath = DEVICES.get(targetDevFullId).getFilepath();
-        return new ServerResponse(MessageCode.OK,filepath);
+
+        String filepath = dev.getFilepath();
+        if (filepath == null){
+            return new ServerResponse(MessageCode.NODATA);
+        }
+
+        // if it's the device's own image, return file
+        if (user.equals(targetUserId)){
+            return new ServerResponse(MessageCode.OK,filepath);
+        }
+
+        //if user isnt target device + does not exist in any of the target domain, return NOPERM
+        for (String dom : dev.getDomains()){
+            Domain domain = DOMAINS.get(dom);
+            if (domain.isRegistered(user)){
+                return new ServerResponse(MessageCode.OK,filepath);
+            }
+        }
+        return new ServerResponse(MessageCode.NOPERM);
+
     }
 
     synchronized private boolean domainExists(String domainName) {
         return DOMAINS.containsKey(domainName);
+    }
+
+    synchronized private Map<String,Float> getTempList(Domain domain){
+        Set<String> devices = domain.getDevices();
+        Map<String,Float> tempMap = new HashMap<String,Float>();
+        for (String userStr : devices){
+            Device dev = DEVICES.get(userStr);
+            tempMap.put(userStr, dev.getTemperature());
+        }
+        return tempMap;
     }
 
     /*
@@ -256,9 +291,7 @@ public class ServerManager {
     }
 
     synchronized public boolean updateUsersFile() throws IOException{
-        // writes updated USERS to file
-        // userWriter.write(user+":"+pwd+"\n");
-        // userWriter.flush();
+        userWriter = new BufferedWriter(new FileWriter(userRecord));
         for(Map.Entry<String,String> entry : USERS.entrySet()){
            userWriter.write(entry.getKey()+":"+entry.getValue()+System.getProperty ("line.separator"));
            userWriter.flush();

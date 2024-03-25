@@ -3,9 +3,11 @@ package iotclient;
 import iohelper.FileHelper;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.ObjectInputStream;
@@ -13,6 +15,8 @@ import java.io.ObjectOutputStream;
 import java.io.OutputStream;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Scanner;
 
 /**
@@ -184,10 +188,19 @@ public class IoTDevice {
             MessageCode code = (MessageCode) in.readObject();
             switch (code) {
                 case OK:
-                    Long fileSize = in.readLong(); // Read file size
+                    // Long fileSize = (long) in.readObject(); // Read file size
+                    HashMap<String,Float> temps = (HashMap) in.readObject();
+                    // TODO: write it to file
                     String fileName = "Temps_" + domain + ".txt";
-                    FileHelper.receiveFile(fileSize, fileName,in);
-                    System.out.println(MessageCode.OK.getDesc() + ", " + fileSize + " (long)"); // TODO
+                    File f = new File(fileName);
+                    f.createNewFile();
+                    BufferedWriter output = new BufferedWriter(new FileWriter(f));
+                    for(Map.Entry<String,Float> entry : temps.entrySet()){
+                        output.write(entry.getKey() + ":" + entry.getValue() + System.getProperty ("line.separator"));
+                        output.flush();
+                    }
+                    // FileHelper.receiveFile(fileSize, fileName,in);
+                    System.out.println(MessageCode.OK.getDesc() + ", " + f.length() + " (long)");
                     break;
                 case NODATA:
                     System.out.println(MessageCode.NODATA.getDesc());

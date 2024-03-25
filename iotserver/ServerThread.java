@@ -99,14 +99,14 @@ public class ServerThread extends Thread {
                         res = sResponse.responseCode();
                         out.writeObject(res);
                         if(res==MessageCode.OK){
-                            FileHelper.sendFile(sResponse.filePath(),out);
-                            break;
+                            // FileHelper.sendFile(sResponse.filePath(),out);
+                            out.writeObject(sResponse.temperatures());
                         }
                         break;
                     case RI:
                         String targetUser = (String)in.readObject();
                         String targetDev = (String)in.readObject();
-                        sResponse = manager.getImage(targetUser, targetDev);
+                        sResponse = manager.getImage(this.userID,targetUser, targetDev);
                         break;
                     case STOP:
                         System.out.println("Client quits. killing thread");
