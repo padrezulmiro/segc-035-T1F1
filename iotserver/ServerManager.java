@@ -1,25 +1,29 @@
 package iotserver;
 
+import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Reader;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Scanner;
+import java.util.stream.Stream;
 
 import iotclient.MessageCode;
 
 public class ServerManager {
     private static volatile ServerManager instance;
 
-    private static Map<String, String> USERS;
-    private static Map<String, Domain> DOMAINS;
-    private static Map<String, Device> DEVICES;
+    public static Map<String, String> USERS;
+    public static Map<String, Domain> DOMAINS;
+    public static Map<String, Device> DEVICES;
 
     private static final String domainFilePath = "domain.txt";
     private static final String userFilePath = "user.txt";
@@ -36,7 +40,6 @@ public class ServerManager {
 
     private static File domainRecord;
     // private static Scanner domainScanner;
-    private static BufferedReader domainReader;
     private static BufferedWriter domainWriter;
 
     
@@ -79,10 +82,8 @@ public class ServerManager {
                     userReader.close();
                     
                     domainRecord = initializeFile(domainFilePath);
-                    domainReader = new BufferedReader(new FileReader(domainRecord));
                     domainWriter = new BufferedWriter(new FileWriter(domainRecord,true));
                     readDomainsFile();
-                    domainReader.close();
                 } catch (IOException e) {
                     // TODO Auto-generated catch block
                     e.printStackTrace();
@@ -197,6 +198,7 @@ public class ServerManager {
     //should be called every time DOMAIN is changed
     synchronized public boolean updateDomainsFile(){
         // writes updated DOMAINS to file
+
         return true;
     }
 
@@ -211,28 +213,47 @@ public class ServerManager {
         return true; 
     }
 
-    //beware that domaindata HAS to only have three items each line
-    //domain_name:user,user,user:dev,dev,dev 
-    //where the first user is the owner of the domain
     synchronized public static void readDomainsFile() throws IOException{
-        String line;
-        while (( line = domainReader.readLine()) != null) {
-            String[]dominfo = line.split(":");
-            String[]users = dominfo[1].split(",");
-            String[]devices = dominfo[2].split(",");
-            String domainName = dominfo[0];
-            Domain domain = new Domain(domainName,users[0]);
-            ServerManager.DOMAINS.put(domainName, domain);
+        final String SP = ":";
+        final char TAB = '\t';
 
-            for(String devName : devices){
-                domain.registerDevice(devName);
-                Device device;
-                if(!DEVICES.containsKey(devName)){
-                    device = new Device(devName);
-                    DEVICES.put(devName,device);
+        BufferedReader reader = new BufferedReader(new FileReader(domainRecord));
+        String[] lines = (String[]) reader.lines().toArray();
+        reader.close();
+
+        String currentDomainName = null;
+        String currentOwner = null;
+        for (int i = 0; i < lines.length; i++) {
+            String line = lines[i];
+            boolean isDomainLine = line.charAt(0) != TAB;
+
+            String[] tokens = line.split(SP);
+            if (isDomainLine) {
+                currentDomainName = tokens[0];
+                currentOwner = tokens[1];
+                instance.createDomain(currentOwner, currentDomainName);
+            } else {
+                String uid = tokens[0];
+                String did = tokens[1];
+                String fullId = uid + SP + did;
+                String temperature = tokens[2];
+                String imagePath = tokens[3];
+
+                Device device = ServerManager.DEVICES.containsKey(fullId) ?
+                    ServerManager.DEVICES.get(fullId) :
+                    new Device(fullId);
+                ServerManager.DEVICES.put(device.fullId(), device);
+
+                instance.addUserToDomain(currentOwner, uid, currentDomainName);
+                instance.registerDeviceInDomain(uid, currentDomainName, did);
+                if (!temperature.equals("")) {
+                    instance.registerTemperature(temperature, fullId);
                 }
-                device = DEVICES.get(devName);
-                device.registerInDomain(domainName);
+                if (!imagePath.equals("")) {
+                    FileInputStream stream = new FileInputStream(imagePath);
+                    instance.registerImage(stream);
+                    stream.close();
+                }
             }
         }
     }
