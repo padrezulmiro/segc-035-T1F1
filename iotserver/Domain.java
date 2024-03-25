@@ -47,4 +47,9 @@ public class Domain {
     public String getName(){
         return name;
     }
+
+    public List<Float> getTempList(){
+        return this.temperatures;
+    }
+
 }

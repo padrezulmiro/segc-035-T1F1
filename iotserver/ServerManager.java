@@ -1,16 +1,15 @@
 package iotserver;
-
+import iohelper.FileHelper;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.Reader;
+import java.io.ObjectInputStream;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
-import java.util.Scanner;
 
 import iotclient.MessageCode;
 
@@ -18,11 +17,13 @@ public class ServerManager {
     private static volatile ServerManager instance;
 
     private static Map<String, String> USERS;
-    private static Map<String, Domain> DOMAINS;
+    private static Map<String, Domain> DOMAINS; 
     private static Map<String, Device> DEVICES;
 
     private static final String domainFilePath = "domain.txt";
     private static final String userFilePath = "user.txt";
+    private static final String imageDirectoryPath = "./img/";
+    private static final String temperatureDirectoryPath = "./temp/";
 
     //TODO: fill this in?
     private static String clientFileName;
@@ -61,6 +62,8 @@ public class ServerManager {
                 try {
                     instance = new ServerManager();
 
+                    new File(imageDirectoryPath).mkdirs();
+                    new File(temperatureDirectoryPath).mkdirs();
                     File clientFile = new File("./bin/iotclient/IoTDevice.class");
                     // File clientDataFile = new File(clientDataPath);
                     clientFileName = clientFile.getName();
@@ -72,7 +75,7 @@ public class ServerManager {
 
                     userRecord = initializeFile(userFilePath);
                     userReader = new BufferedReader(new FileReader(userRecord));
-                    userWriter = new BufferedWriter(new FileWriter(userRecord,true));
+                    userWriter = new BufferedWriter(new FileWriter(userRecord));
                     // why would this empty it all.
                     // ref: https://stackoverflow.com/questions/17244713/using-filewriter-and-bufferedwriter-clearing-file-for-some-reason
                     readUsersFile();
@@ -107,30 +110,29 @@ public class ServerManager {
 
     }
 
-    synchronized public ServerResponse addUserToDomain(String ownerUId, String newUserId, String domainName) {
+    synchronized public ServerResponse addUserToDomain(String ownderUID, String newUserID, String domainName) {
         if (!domainExists(domainName)) {
             return new ServerResponse(MessageCode.NODM);
         }
 
         Domain domain = DOMAINS.get(domainName);
 
-        if (!domain.isOwner(ownerUId)) {
+        if (!domain.isOwner(ownderUID)) {
             return new ServerResponse(MessageCode.NOPERM);
         }
 
-        if (domain.registerUser(newUserId)) {
+        if (domain.registerUser(newUserID)) {
             // update DOMAINS
             ServerManager.DOMAINS.replace(domain.getName(),domain);
             updateDomainsFile();
             return new ServerResponse(MessageCode.OK);
         } else {
-            // XXX is this the correct implementation?
             return new ServerResponse(MessageCode.USEREXISTS);
         }
     }
 
     // devID being ID
-    synchronized public ServerResponse registerDeviceInDomain(String userId, String domainName, String devId) {
+    synchronized public ServerResponse registerDeviceInDomain(String domainName, String userId, String devId) {
         if (!domainExists(domainName)) {
             return new ServerResponse(MessageCode.NODM);
         }
@@ -141,7 +143,7 @@ public class ServerManager {
         }
 
         String fullDevId = userId + ":" + devId;
-        ServerManager.DEVICES.get(fullDevId).registerInDomain(domainName); // XXX: i dont like this :|
+        ServerManager.DEVICES.get(fullDevId).registerInDomain(domainName);
         domain.registerDevice(fullDevId);
         ServerManager.DOMAINS.replace(domainName,domain);
         updateDomainsFile();
@@ -149,28 +151,81 @@ public class ServerManager {
     }
 
 
-    synchronized public ServerResponse registerTemperature(String temperatureString, String device) {
+    synchronized public ServerResponse registerTemperature(String temperatureString, String userId, String devId) {
         float temperature;
+        String fullDevId = userId + ":" + devId;
         try {
             temperature = Float.parseFloat(temperatureString);
         } catch (NumberFormatException e) {
             return new ServerResponse(MessageCode.NOK);
         }
-
-        ServerManager.DEVICES.get(device).registerTemperature(temperature);
+        ServerManager.DEVICES.get(fullDevId).registerTemperature(temperature);
         return new ServerResponse(MessageCode.OK);
     }
 
-    synchronized public ServerResponse registerImage(InputStream imageStream) {
-        throw new UnsupportedOperationException();
+    synchronized public ServerResponse registerImage(String filename, long filesize, ObjectInputStream in, String userId, String devId){
+        String fullDevId = userId + ":" + devId;
+        String fullImgPath = imageDirectoryPath+filename;
+
+        // try {
+        //     // set up file generation
+        //     File f = new File(fullImgPath);
+        //     FileOutputStream fout = new FileOutputStream(f);
+        //     OutputStream fileOutput = new BufferedOutputStream(fout);
+            
+        //     // set up buffered data reading
+        //     InputStream input = new BufferedInputStream(imageStream);
+        //     int totalBytesRead = 0;
+        //     byte[] buffer = new byte[1024];
+        //     // writing to drive
+        //     while (filesize > totalBytesRead){
+        //         int bytesRead = input.read(buffer,0,1024);
+        //         totalBytesRead += bytesRead;
+        //         fileOutput.write(buffer,0,bytesRead);
+        //         fileOutput.flush();
+        //     }
+        //     fileOutput.close();
+        //     fout.close();            
+        // } catch (Exception e) {
+        //     return new ServerResponse(MessageCode.NOK);
+        // }
+
+        FileHelper.receiveFile(filesize, fullImgPath, in);
+
+        ServerManager.DEVICES.get(fullDevId).registerImage(fullImgPath);
+        return new ServerResponse(MessageCode.OK);
     }
 
-    synchronized public ServerResponse getTemperatures(String domainName) {
-        throw new UnsupportedOperationException();
+    synchronized public ServerResponse getTemperatures(String user, String domainName) throws IOException {
+        Domain dom = ServerManager.DOMAINS.get(domainName);
+        if (dom == null){
+            return new ServerResponse(MessageCode.NODM); 
+        }
+        if (dom.isRegistered(user)){
+            List<Float> temps = dom.getTempList();
+            // write into File
+            String tempFilePath = temperatureDirectoryPath+"temps_" + domainName + ".txt";
+            File tempFile = new File(tempFilePath);
+            BufferedWriter tempWriter = new BufferedWriter(new FileWriter(tempFile));
+            for(Float f : temps){
+                tempWriter.write(Float.toString(f)+System.getProperty ("line.separator"));
+                tempWriter.flush();
+            }
+            tempWriter.close();
+
+            // FileHelper.sendFile(tempFilePath, out);
+            return new ServerResponse(MessageCode.OK,tempFilePath);
+        }else return new ServerResponse(MessageCode.NOPERM);
     }
 
     synchronized public ServerResponse getImage(String targetUserId, String targetDevId) {
-        throw new UnsupportedOperationException();
+        String targetDevFullId = targetUserId + ":" + targetDevId;
+        Device dev = DEVICES.get(targetDevFullId);
+        if (dev == null){
+            return  new ServerResponse(MessageCode.NOID);
+        }
+        String filepath = DEVICES.get(targetDevFullId).getFilepath();
+        return new ServerResponse(MessageCode.OK,filepath);
     }
 
     synchronized private boolean domainExists(String domainName) {
@@ -205,7 +260,7 @@ public class ServerManager {
         // userWriter.write(user+":"+pwd+"\n");
         // userWriter.flush();
         for(Map.Entry<String,String> entry : USERS.entrySet()){
-           userWriter.write(entry.getKey()+":"+entry.getValue());
+           userWriter.write(entry.getKey()+":"+entry.getValue()+System.getProperty ("line.separator"));
            userWriter.flush();
         }
         return true; 
@@ -243,6 +298,10 @@ public class ServerManager {
             String[]id = line.split(":");
             USERS.put(id[0],id[1]);
         }
+    }
+
+    private static String fullID(String userId, String devId){
+        return null;
     }
 
     /*

@@ -10,11 +10,12 @@ public class ServerResponse  {
     private MessageCode code;
     private long fileSize;
     private InputStream fileStream;
-
+    private String filePath;
     public ServerResponse(MessageCode code) {
         this.code = code;
         this.fileSize = -1;
         this.fileStream = null;
+        // this.temperatures = new ArrayList<>();
     }
 
     public ServerResponse(MessageCode code, String filePath) {
@@ -38,6 +39,10 @@ public class ServerResponse  {
 
     public InputStream dataStream() {
         return fileStream;
+    }
+
+    public String filePath(){
+        return filePath;
     }
 
 }
