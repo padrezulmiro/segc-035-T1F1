@@ -1,18 +1,12 @@
 package iotclient;
 
 import iohelper.FileHelper;
-import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
 import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.io.OutputStream;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.HashMap;
@@ -70,6 +64,10 @@ public class IoTDevice {
             System.out.println("\nCaught Ctrl-C. Shutting down.");
             try {
                 out.writeObject(MessageCode.STOP);
+                // Close socket 
+                if(clientSocket != null){
+                    clientSocket.close();
+                }
             } catch (IOException e) {
                 // TODO Auto-generated catch block
                 e.printStackTrace();
