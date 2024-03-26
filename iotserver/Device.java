@@ -2,6 +2,7 @@ package iotserver;
 
 import java.util.HashSet;
 import java.util.Set;
+import iohelper.FileHelper;
 
 public class Device {
     private String userId;
@@ -44,6 +45,7 @@ public class Device {
     }
 
     public void registerImage(String imgPath) {
+        this.imgPath=imgPath;
         throw new UnsupportedOperationException();
     }
 
@@ -55,12 +57,20 @@ public class Device {
         temp = temperature;
     }
 
-    public Float getTemperature() {
-        return temp;
-    }
-
     public String getImagePath() {
         return imgPath;
+    }
+
+    public String getFilepath(){
+        return this.imgPath;
+    }
+
+    public Set<String> getDomains(){
+        return this.registeredDomains;
+    }
+
+    public Float getTemperature(){
+        return this.temp;
     }
 
     @Override
