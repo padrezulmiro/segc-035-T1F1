@@ -24,6 +24,7 @@ public class ServerResponse  {
 
     public ServerResponse(MessageCode code, String filePath) {
         this.code = code;
+        this.filePath= filePath;
         File file = new File(filePath);
         this.fileSize = file.length();
         try {
