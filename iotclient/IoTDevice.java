@@ -194,12 +194,12 @@ public class IoTDevice {
                     // essentially ClassCastException will be thrown if any of the maps is bad
 
                     // TODO: write it to file
-                    String fileName = "Temps_" + domain + ".txt";
+                    String fileName = "temps_" + domain + ".txt";
                     File f = new File(fileName);
                     f.createNewFile();
                     BufferedWriter output = new BufferedWriter(new FileWriter(f));
                     for(Map.Entry<String,Float> entry : temps.entrySet()){
-                        output.write(entry.getKey() + ":" + entry.getValue() + System.getProperty ("line.separator"));
+                        output.write(entry.getKey() + ": " + entry.getValue() + System.getProperty ("line.separator"));
                         output.flush();
                     }
                     // FileHelper.receiveFile(fileSize, fileName,in);
@@ -319,7 +319,7 @@ public class IoTDevice {
     private static void sendTemperature(String temp) { // Should it test if the value can be converted to a float?
         try {
             out.writeObject(MessageCode.ET); // Send opcode
-            out.writeObject(Float.valueOf(temp)); // Send user
+            out.writeObject(temp); // Send user
             // Receive message
             MessageCode code = (MessageCode) in.readObject();
             switch (code) {
@@ -508,7 +508,7 @@ public class IoTDevice {
             System.out.println("Server not found: " + e.getMessage());
 
         } catch (IOException e) {
-            System.err.println("ERROR" + e.getMessage());
+            System.err.println("ERROR: " + e.getMessage());
             System.exit(-1);
         }
         return false;

@@ -162,6 +162,7 @@ public class ServerManager {
             return new ServerResponse(MessageCode.NOK);
         }
         ServerManager.DEVICES.get(fullDevId).registerTemperature(temperature);
+        updateDomainsFile();
         return new ServerResponse(MessageCode.OK);
     }
 
@@ -205,6 +206,11 @@ public class ServerManager {
         }
         if (dom.isRegistered(user)){
             Map<String,Float> temps = getTempList(dom);
+            // for (String name: temps.keySet()) {
+            //     String key = name.toString();
+            //     String value = temps.get(name).toString();
+            //     System.out.println(key + " " + value);
+            // }
             // // write into File
             // String tempFilePath = temperatureDirectoryPath+"temps_" + domainName + ".txt";
             // File tempFile = new File(tempFilePath);
