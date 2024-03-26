@@ -57,21 +57,22 @@ public class Device {
         temp = temperature;
     }
 
-    public String getImagePath() {
-        return imgPath;
-    }
-
     public String getFilepath(){
         return this.imgPath;
+    }
+
+    public Float getTemperature(){
+        return this.temp;
+    }
+
+    public String getImagePath() {
+        return imgPath;
     }
 
     public Set<String> getDomains(){
         return this.registeredDomains;
     }
 
-    public Float getTemperature(){
-        return this.temp;
-    }
 
     @Override
     public boolean equals(Object obj) {

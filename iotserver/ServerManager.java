@@ -3,19 +3,14 @@ import iohelper.FileHelper;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.PrintWriter;
 import java.io.ObjectInputStream;
-import java.util.Arrays;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
 
 import iotclient.MessageCode;
@@ -143,7 +138,7 @@ public class ServerManager {
             return new ServerResponse(MessageCode.NOPERM);
         }
 
-        String fullDevId = userId + ":" + devId;
+        String fullDevId = fullID(userId, devId);
         ServerManager.DEVICES.get(fullDevId).registerInDomain(domainName);
         domain.registerDevice(fullDevId);
         updateDomainsFile();
@@ -153,7 +148,7 @@ public class ServerManager {
 
     synchronized public ServerResponse registerTemperature(String temperatureString, String userId, String devId) {
         float temperature;
-        String fullDevId = userId + ":" + devId;
+        String fullDevId = fullID(userId, devId);
         try {
             temperature = Float.parseFloat(temperatureString);
         } catch (NumberFormatException e) {
@@ -164,7 +159,7 @@ public class ServerManager {
     }
 
     synchronized public ServerResponse registerImage(String filename, long filesize, ObjectInputStream in, String userId, String devId){
-        String fullDevId = userId + ":" + devId;
+        String fullDevId = fullID(userId, devId);
         String fullImgPath = imageDirectoryPath+filename;
 
         // try {
@@ -222,13 +217,13 @@ public class ServerManager {
     }
 
     synchronized public ServerResponse getImage(String user,String targetUserId, String targetDevId) {
-        String targetDevFullId = targetUserId + ":" + targetDevId;
+        String targetDevFullId = fullID(targetUserId, targetDevId);
         Device dev = DEVICES.get(targetDevFullId);
         if (dev == null){
             return new ServerResponse(MessageCode.NOID);
         }
 
-        String filepath = dev.getFilepath();
+        String filepath = dev.getImagePath();
         if (filepath == null){
             return new ServerResponse(MessageCode.NODATA);
         }
@@ -379,16 +374,16 @@ public class ServerManager {
         }
     }
 
-    private static String fullID(String userId, String devId){
-        return null;
-    }
-
     /*
      * UTILITY==================================================================
      */
 
     synchronized public static Device getDevice(String fullId){
         return ServerManager.DEVICES.get(fullId);
+    }
+
+    private static String fullID(String userId, String devId){
+        return (userId+":"+devId);
     }
 
     /*
@@ -423,7 +418,7 @@ public class ServerManager {
 
     //assumes userId exists
     public synchronized ServerResponse authenticateDevice(String userId, String devId)throws IOException{
-        String fullDevId = userId + ":" + devId;
+        String fullDevId = fullID(userId, devId);
         if(DEVICES.containsKey(fullDevId)){
             Device dev = DEVICES.get(fullDevId);
             System.out.println("devid:" + fullDevId);
