@@ -1,29 +1,27 @@
 package iotserver;
 
-import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.Reader;
-import java.util.ArrayList;
+import java.io.PrintWriter;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Scanner;
-import java.util.stream.Stream;
 
 import iotclient.MessageCode;
 
 public class ServerManager {
     private static volatile ServerManager instance;
 
-    public static Map<String, String> USERS;
-    public static Map<String, Domain> DOMAINS;
-    public static Map<String, Device> DEVICES;
+    // FIXME change these to private again and getters
+    private static Map<String, String> USERS;
+    private static Map<String, Domain> DOMAINS;
+    private static Map<String, Device> DEVICES;
 
     private static final String domainFilePath = "domain.txt";
     private static final String userFilePath = "user.txt";
@@ -39,10 +37,6 @@ public class ServerManager {
     private static BufferedWriter userWriter;
 
     private static File domainRecord;
-    // private static Scanner domainScanner;
-    private static BufferedWriter domainWriter;
-
-    
 
     private ServerManager(){
         // check if the files exists. if not, create the files
@@ -80,10 +74,10 @@ public class ServerManager {
                     // ref: https://stackoverflow.com/questions/17244713/using-filewriter-and-bufferedwriter-clearing-file-for-some-reason
                     readUsersFile();
                     userReader.close();
-                    
+
                     domainRecord = initializeFile(domainFilePath);
-                    domainWriter = new BufferedWriter(new FileWriter(domainRecord,true));
                     readDomainsFile();
+                    instance.registerDeviceInDomain("ana", "Room2", "1");
                 } catch (IOException e) {
                     // TODO Auto-generated catch block
                     e.printStackTrace();
@@ -92,7 +86,7 @@ public class ServerManager {
             return instance;
         }
     }
-    
+
     /*
      * CLIENT COMMANDS====================================================================================================================
      */
@@ -101,7 +95,7 @@ public class ServerManager {
             return new ServerResponse(MessageCode.NOK);
         }
         Domain domain = new Domain(domainName, clientUID);
-        ServerManager.DOMAINS.put(domainName, domain); 
+        ServerManager.DOMAINS.put(domainName, domain);
         updateDomainsFile();
 
         return new ServerResponse(MessageCode.OK);
@@ -142,9 +136,8 @@ public class ServerManager {
         }
 
         String fullDevId = userId + ":" + devId;
-        ServerManager.DEVICES.get(fullDevId).registerInDomain(domainName); // XXX: i dont like this :|
+        ServerManager.DEVICES.get(fullDevId).registerInDomain(domainName);
         domain.registerDevice(fullDevId);
-        ServerManager.DOMAINS.replace(domainName,domain);
         updateDomainsFile();
         return new ServerResponse(MessageCode.OK);
     }
@@ -184,20 +177,28 @@ public class ServerManager {
 
     public static File initializeFile(String filename) throws IOException{
         File fileCreated = new File(filename);
-        if(!fileCreated.exists() ){
+        if(!fileCreated.exists()) {
             fileCreated.createNewFile();
             System.out.println("File created: " + fileCreated.getName());
         }
-        // System.out.println("generated new file:" + fileCreated.getName());
-        // if (!fileCreated.exists() && fileCreated.createNewFile()) {
-        //     System.out.println("File created: " + fileCreated.getName());
-        // }
         return fileCreated;
     }
 
     //should be called every time DOMAIN is changed
     synchronized public boolean updateDomainsFile(){
         // writes updated DOMAINS to file
+        StringBuilder sb = new StringBuilder();
+        for (Domain domain : ServerManager.DOMAINS.values()) {
+            sb.append(domain.toString());
+        }
+
+        try (PrintWriter pw = new PrintWriter(domainRecord)) {
+            pw.write(sb.toString());
+            pw.close();
+        } catch (FileNotFoundException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
 
         return true;
     }
@@ -214,11 +215,11 @@ public class ServerManager {
     }
 
     synchronized public static void readDomainsFile() throws IOException{
-        final String SP = ":";
+        final char SP = ':';
         final char TAB = '\t';
 
         BufferedReader reader = new BufferedReader(new FileReader(domainRecord));
-        String[] lines = (String[]) reader.lines().toArray();
+        String[] lines = (String[]) reader.lines().toArray(String[]::new);
         reader.close();
 
         String currentDomainName = null;
@@ -226,44 +227,74 @@ public class ServerManager {
         for (int i = 0; i < lines.length; i++) {
             String line = lines[i];
             boolean isDomainLine = line.charAt(0) != TAB;
+            String[] tokens = Utils.split(line, SP);
 
-            String[] tokens = line.split(SP);
             if (isDomainLine) {
                 currentDomainName = tokens[0];
                 currentOwner = tokens[1];
-                instance.createDomain(currentOwner, currentDomainName);
+                instance.populateDomain(tokens);
             } else {
-                String uid = tokens[0];
-                String did = tokens[1];
-                String fullId = uid + SP + did;
-                String temperature = tokens[2];
-                String imagePath = tokens[3];
-
-                Device device = ServerManager.DEVICES.containsKey(fullId) ?
-                    ServerManager.DEVICES.get(fullId) :
-                    new Device(fullId);
-                ServerManager.DEVICES.put(device.fullId(), device);
-
-                instance.addUserToDomain(currentOwner, uid, currentDomainName);
-                instance.registerDeviceInDomain(uid, currentDomainName, did);
-                if (!temperature.equals("")) {
-                    instance.registerTemperature(temperature, fullId);
-                }
-                if (!imagePath.equals("")) {
-                    FileInputStream stream = new FileInputStream(imagePath);
-                    instance.registerImage(stream);
-                    stream.close();
-                }
+                instance.populateDevices(tokens, currentDomainName, currentOwner);
             }
         }
     }
+
+    private void populateDomain(String[] tokens) {
+        String domainName = tokens[0];
+        String owner = tokens[1];
+
+        Domain domain = new Domain(domainName, owner);
+        for (int j = 2; j < tokens.length; j++) {
+            String user = tokens[j];
+            domain.registerUser(user);
+        }
+
+        ServerManager.DOMAINS.put(domainName, domain);
+    }
     
+    private void populateDevices(String[] tokens, String domainName,
+                                 String owner) {
+        final char SP = ':';
+
+        String uid = tokens[0];
+        String did = tokens[1];
+        String temperature = tokens[2];
+        String imagePath = tokens[3];
+        String fullId = uid + SP + did;
+        System.out.println(fullId);
+
+        Device device = ServerManager.DEVICES.containsKey(fullId) ?
+            ServerManager.DEVICES.get(fullId) : new Device(fullId);
+
+        if (!ServerManager.DEVICES.containsKey(fullId)) {
+            ServerManager.DEVICES.put(device.fullId(), device);
+        }
+
+        Domain domain = ServerManager.DOMAINS.get(domainName);
+        device.registerInDomain(domainName);
+        domain.registerDevice(fullId);
+
+        if (!temperature.equals("")) {
+            device.registerTemperature(Float.parseFloat(temperature));
+        }
+
+        if (!imagePath.equals("")) {device.registerImage(imagePath);}
+    }
+
     synchronized public static void readUsersFile() throws IOException{
         String line;
         while (( line = userReader.readLine()) != null) {
             String[]id = line.split(":");
             USERS.put(id[0],id[1]);
         }
+    }
+
+    /*
+     * UTILITY==================================================================
+     */
+
+    synchronized public static Device getDevice(String fullId){
+        return ServerManager.DEVICES.get(fullId);
     }
 
     /*

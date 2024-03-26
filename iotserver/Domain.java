@@ -55,10 +55,16 @@ public class Domain {
         final char SP = ':';
 
         StringBuilder sb = new StringBuilder();
-        sb.append(getName() + SP + ownerId + NL);
+        sb.append(getName() + SP + ownerId);
+
+        for (String registeredUser : registeredUsers) {
+            sb.append(SP + registeredUser);
+        }
+
+        sb.append(NL);
 
         for (String devFullId : devices) {
-            Device deviceObj = ServerManager.DEVICES.get(devFullId);
+            Device deviceObj = ServerManager.getDevice(devFullId);
             sb.append(TAB + deviceObj.toString());
         }
 

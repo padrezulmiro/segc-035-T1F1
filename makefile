@@ -6,7 +6,8 @@ Domain \
 IoTServer \
 ServerThread \
 ServerManager \
-ServerResponse
+ServerResponse \
+Utils
 
 BIN_DIR := bin
 DEVICE_DIR := iotclient
