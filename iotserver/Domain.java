@@ -16,9 +16,13 @@ public class Domain {
         this.ownerId = ownerId;
         this.registeredUsers = new HashSet<>();
         this.devices = new HashSet<>();
+        // registerUser(ownerId);
     }
 
     public boolean registerUser(String userId) {
+        if (this.isOwner(userId)){
+            return false;
+        }
         return registeredUsers.add(userId);
     }
 
@@ -27,7 +31,7 @@ public class Domain {
     }
 
     public boolean isRegistered(String userId) {
-        return registeredUsers.contains(userId);
+        return registeredUsers.contains(userId) || isOwner(userId);
     }
 
     public boolean registerDevice(String deviceFullID) {

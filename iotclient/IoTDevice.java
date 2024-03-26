@@ -187,7 +187,12 @@ public class IoTDevice {
             switch (code) {
                 case OK:
                     // Long fileSize = (long) in.readObject(); // Read file size
-                    HashMap<String,Float> temps = (HashMap) in.readObject();
+                    @SuppressWarnings("unchecked") HashMap<String,Float> temps = (HashMap<String,Float>) in.readObject();
+                    for (@SuppressWarnings("unused") String s : temps.keySet());
+                    for (@SuppressWarnings("unused") Number n : temps.values());
+                    // reason for the empty loops: https://stackoverflow.com/a/509288
+                    // essentially ClassCastException will be thrown if any of the maps is bad
+
                     // TODO: write it to file
                     String fileName = "Temps_" + domain + ".txt";
                     File f = new File(fileName);
@@ -314,7 +319,7 @@ public class IoTDevice {
     private static void sendTemperature(String temp) { // Should it test if the value can be converted to a float?
         try {
             out.writeObject(MessageCode.ET); // Send opcode
-            out.writeFloat(Float.valueOf(temp)); // Send user
+            out.writeObject(Float.valueOf(temp)); // Send user
             // Receive message
             MessageCode code = (MessageCode) in.readObject();
             switch (code) {
@@ -349,6 +354,8 @@ public class IoTDevice {
                 case NODM:
                     System.out.println(MessageCode.NODM.getDesc());
                     break;
+                case DEVICEEXISTS:
+                    System.out.println(MessageCode.DEVICEEXISTS.getDesc());
                 default:
                     break;
             }
@@ -384,6 +391,8 @@ public class IoTDevice {
                 case NOUSER:
                     System.out.println(MessageCode.NOUSER.getDesc());
                     break;
+                case USEREXISTS:
+                    System.out.println(MessageCode.USEREXISTS.getDesc());
                 default:
                     break;
             }

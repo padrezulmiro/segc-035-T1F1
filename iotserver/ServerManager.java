@@ -112,6 +112,9 @@ public class ServerManager {
         }
 
         Domain domain = DOMAINS.get(domainName);
+        if (!userExists(newUserID)){
+            return new ServerResponse(MessageCode.NOUSER);
+        }
 
         if (!domain.isOwner(ownderUID)) {
             return new ServerResponse(MessageCode.NOPERM);
@@ -138,6 +141,10 @@ public class ServerManager {
             return new ServerResponse(MessageCode.NOPERM);
         }
 
+        String fullID = fullID(userId, devId);
+        if(domain.isDeviceRegistered(fullID)){
+            return new ServerResponse(MessageCode.DEVICEEXISTS);
+        }
         String fullDevId = fullID(userId, devId);
         ServerManager.DEVICES.get(fullDevId).registerInDomain(domainName);
         domain.registerDevice(fullDevId);
@@ -414,6 +421,11 @@ public class ServerManager {
 
     synchronized private boolean userExists(String userID) {
         return USERS.containsKey(userID);
+    }
+
+    public void disconnectDevice(String userID, String devID){
+        String fullID = fullID(userID, devID);
+        DEVICES.get(fullID).goOffline();
     }
 
     //assumes userId exists

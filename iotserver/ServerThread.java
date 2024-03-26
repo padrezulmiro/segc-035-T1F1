@@ -84,6 +84,7 @@ public class ServerThread extends Thread {
                         String tempStr = (String)in.readObject();
                         res = manager.registerTemperature(tempStr,this.userID,this.deviceID).responseCode();
                         out.writeObject(res);
+                        out.flush();
                         break;
                     case EI:
                         // input image stream
@@ -110,6 +111,7 @@ public class ServerThread extends Thread {
                         break;
                     case STOP:
                         System.out.println("Client quits. killing thread");
+                        manager.disconnectDevice(this.userID, this.deviceID);
                         isRunning = false;
                         break;
                 }
