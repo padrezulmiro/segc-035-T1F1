@@ -10,14 +10,12 @@ public class Domain {
     private String ownerId;
     private Set<String> registeredUsers;
     private Set<String> devices;
-    private List<Float> temperatures;
 
     public Domain(String name, String ownerId) {
         this.name = name;
         this.ownerId = ownerId;
         this.registeredUsers = new HashSet<>();
         this.devices = new HashSet<>();
-        this.temperatures = new ArrayList<>();
     }
 
     public boolean registerUser(String userId) {
@@ -36,16 +34,16 @@ public class Domain {
         return devices.add(deviceFullID);
     }
 
-    public void registerTemperature(float temperature) {
-        temperatures.add(temperature);
-    }
+    // public void registerTemperature(float temperature) {
+    //     temperatures.add(temperature);
+    // }
 
     public boolean isDeviceRegistered(String device) {
         return devices.contains(device);
     }
     
     public String getName(){
-        return name;
+        return this.name;
     }
 
     @Override
@@ -70,4 +68,13 @@ public class Domain {
 
         return sb.toString();
     }
+
+    public Set<String> getDevices(){
+        return this.devices;
+    }
+
+    public Set<String> getUsers(){
+        return this.registeredUsers;
+    }
+
 }

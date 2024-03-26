@@ -1,17 +1,16 @@
 package iotclient;
 
-import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
+import iohelper.FileHelper;
+import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
+import java.io.FileWriter;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.io.OutputStream;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Scanner;
 
 /**
@@ -65,6 +64,10 @@ public class IoTDevice {
             System.out.println("\nCaught Ctrl-C. Shutting down.");
             try {
                 out.writeObject(MessageCode.STOP);
+                // Close socket 
+                if(clientSocket != null){
+                    clientSocket.close();
+                }
             } catch (IOException e) {
                 // TODO Auto-generated catch block
                 e.printStackTrace();
@@ -121,7 +124,7 @@ public class IoTDevice {
                 if (cmd.length != 2) {
                     System.out.println("Error: incorrect args\nUsage: RT <dm>");
                 } else {
-                    receiveTemp(cmd[1]);
+                    receiveTemps(cmd[1]);
                 }
                 break;
             case "RI:":
@@ -144,15 +147,17 @@ public class IoTDevice {
     private static void receiveImage(String device) {
         try {
             out.writeObject(MessageCode.RI); // Send opcode
-            out.writeObject(device);
+            String[] dev = device.split(":");
+            out.writeObject(dev[0]);
+            out.writeObject(dev[1]);
             // Receive message
             MessageCode code = (MessageCode) in.readObject();
             switch (code) {
                 case OK:
                     Long fileSize = in.readLong(); // Read file size
-                    String[] dev = device.split(":");
+                    // String[] dev = device.split(":");
                     String fileName = "Img_" + dev[0] + "_" + dev[1] + ".jpg";
-                    receiveFile(fileSize, fileName);
+                    FileHelper.receiveFile(fileSize, fileName,in);
                     System.out.println(MessageCode.OK.getDesc() + ", " + fileSize + " (long)"); // TODO
                     break;
                 case NODATA:
@@ -173,7 +178,7 @@ public class IoTDevice {
         }
     }
 
-    private static void receiveTemp(String domain) {
+    private static void receiveTemps(String domain) {
         try {
             out.writeObject(MessageCode.RT); // Send opcode
             out.writeObject(domain);
@@ -181,10 +186,19 @@ public class IoTDevice {
             MessageCode code = (MessageCode) in.readObject();
             switch (code) {
                 case OK:
-                    Long fileSize = in.readLong(); // Read file size
+                    // Long fileSize = (long) in.readObject(); // Read file size
+                    HashMap<String,Float> temps = (HashMap) in.readObject();
+                    // TODO: write it to file
                     String fileName = "Temps_" + domain + ".txt";
-                    receiveFile(fileSize, fileName);
-                    System.out.println(MessageCode.OK.getDesc() + ", " + fileSize + " (long)"); // TODO
+                    File f = new File(fileName);
+                    f.createNewFile();
+                    BufferedWriter output = new BufferedWriter(new FileWriter(f));
+                    for(Map.Entry<String,Float> entry : temps.entrySet()){
+                        output.write(entry.getKey() + ":" + entry.getValue() + System.getProperty ("line.separator"));
+                        output.flush();
+                    }
+                    // FileHelper.receiveFile(fileSize, fileName,in);
+                    System.out.println(MessageCode.OK.getDesc() + ", " + f.length() + " (long)");
                     break;
                 case NODATA:
                     System.out.println(MessageCode.NODATA.getDesc());
@@ -204,43 +218,43 @@ public class IoTDevice {
         }
     }
 
-    /**
-     * Receive's a file from the server.
-     * 
-     * @param fileSize File size.
-     * @param path File path
-     */
-    private static void receiveFile(Long fileSize, String path) {
-        try {
-            File f = new File(path);
-            f.createNewFile();
+    // /**
+    //  * Receive's a file from the server.
+    //  * 
+    //  * @param fileSize File size.
+    //  * @param path File path
+    //  */
+    // private static void receiveFile(Long fileSize, String path) {
+    //     try {
+    //         File f = new File(path);
+    //         f.createNewFile();
 
-            FileOutputStream fout = new FileOutputStream(f);
-            OutputStream output = new BufferedOutputStream(fout);
+    //         FileOutputStream fout = new FileOutputStream(f);
+    //         OutputStream output = new BufferedOutputStream(fout);
 
-            int bytesWritten = 0;
-            byte[] buffer = new byte[1024];
+    //         int bytesWritten = 0;
+    //         byte[] buffer = new byte[1024];
 
-            while (fileSize > bytesWritten) {
-                int bytesRead = in.read(buffer, 0, 1024);
-                output.write(buffer, 0, bytesRead);
-                output.flush();
-                fout.flush();
-                bytesWritten += bytesRead;
-                System.out.println(bytesWritten);
-            }
-            output.close();
-            fout.close();
-        } catch (IOException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-        }
-    }
+    //         while (fileSize > bytesWritten) {
+    //             int bytesRead = in.read(buffer, 0, 1024);
+    //             output.write(buffer, 0, bytesRead);
+    //             output.flush();
+    //             fout.flush();
+    //             bytesWritten += bytesRead;
+    //             System.out.println(bytesWritten);
+    //         }
+    //         output.close();
+    //         fout.close();
+    //     } catch (IOException e) {
+    //         // TODO Auto-generated catch block
+    //         e.printStackTrace();
+    //     }
+    // }
 
     private static void sendImage(String imagePath) {
         try {
             out.writeObject(MessageCode.EI); // Send opcode
-            sendFile(imagePath);
+            FileHelper.sendFile(("client\\" + imagePath),out);
             // Receive message
             MessageCode code = (MessageCode) in.readObject();
             switch (code) {
@@ -259,36 +273,38 @@ public class IoTDevice {
         }
     }
 
-    /**
-     * Sends a file to the server.
-     * 
-     * @param path File path
-     */
-    private static void sendFile(String path) {
-        File f = new File("client\\" + path);
-        long fileSize = f.length();
-        try {
-            // Send file size
-            out.writeLong(fileSize);
+    // /**
+    //  * Sends a file to the server.
+    //  * 
+    //  * @param path File path
+    //  */
+    // private static void sendFile(String path) {
+    //     File f = new File("client\\" + path);
+    //     long fileSize = f.length();
+    //     try {
+    //         // Send file name
+    //         out.writeObject(f.getName());
+    //         // Send file size
+    //         out.writeObject(fileSize);
 
-            FileInputStream fin = new FileInputStream(f);
-            InputStream input = new BufferedInputStream(fin);
-            // Send file
-            int bytesSent = 0;
-            byte[] buffer = new byte[1024];
-            while (fileSize > bytesSent) {
-                int bytesRead = input.read(buffer, 0, 1024);
-                bytesSent += bytesRead;
-                out.write(buffer, 0, bytesRead);
-                out.flush();
-            }
-            input.close();
-            fin.close();
-        } catch (IOException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-        }
-    }
+    //         FileInputStream fin = new FileInputStream(f);
+    //         InputStream input = new BufferedInputStream(fin);
+    //         // Send file
+    //         int bytesSent = 0;
+    //         byte[] buffer = new byte[1024];
+    //         while (fileSize > bytesSent) {
+    //             int bytesRead = input.read(buffer, 0, 1024);
+    //             bytesSent += bytesRead;
+    //             out.write(buffer, 0, bytesRead);
+    //             out.flush();
+    //         }
+    //         input.close();
+    //         fin.close();
+    //     } catch (IOException e) {
+    //         // TODO Auto-generated catch block
+    //         e.printStackTrace();
+    //     }
+    // }
 
     /**
      * Sends a temperature value to the server.
