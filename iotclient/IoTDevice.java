@@ -259,7 +259,7 @@ public class IoTDevice {
     private static void sendImage(String imagePath) {
         try {
             out.writeObject(MessageCode.EI); // Send opcode
-            FileHelper.sendFile(("client\\" + imagePath),out);
+            FileHelper.sendFile((imagePath),out);
             // Receive message
             MessageCode code = (MessageCode) in.readObject();
             switch (code) {
