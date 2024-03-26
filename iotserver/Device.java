@@ -1,8 +1,6 @@
 package iotserver;
 
-import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 import iohelper.FileHelper;
 
@@ -63,13 +61,18 @@ public class Device {
         return this.imgPath;
     }
 
+    public Float getTemperature(){
+        return this.temp;
+    }
+
+    public String getImagePath() {
+        return imgPath;
+    }
+
     public Set<String> getDomains(){
         return this.registeredDomains;
     }
 
-    public float getTemperature(){
-        return this.temp;
-    }
 
     @Override
     public boolean equals(Object obj) {
@@ -86,5 +89,20 @@ public class Device {
         int code = this.userId.hashCode();
         code = 31 * code + this.devId.hashCode();
         return code;
+    }
+
+    @Override
+    public String toString() {
+        final char NL = '\n';
+        final char SP = ':';
+
+        String temperature = getTemperature() != null ?
+            Float.toString(getTemperature()) : "";
+        String imagePath = getImagePath() != null ?
+            getImagePath() : "";
+
+        StringBuilder sb = new StringBuilder();
+        sb.append(fullId() + SP + temperature + SP + imagePath + NL);
+        return sb.toString();
     }
 }

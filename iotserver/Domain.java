@@ -46,6 +46,29 @@ public class Domain {
         return this.name;
     }
 
+    @Override
+    public String toString() {
+        final char NL = '\n';
+        final char TAB = '\t';
+        final char SP = ':';
+
+        StringBuilder sb = new StringBuilder();
+        sb.append(getName() + SP + ownerId);
+
+        for (String registeredUser : registeredUsers) {
+            sb.append(SP + registeredUser);
+        }
+
+        sb.append(NL);
+
+        for (String devFullId : devices) {
+            Device deviceObj = ServerManager.getDevice(devFullId);
+            sb.append(TAB + deviceObj.toString());
+        }
+
+        return sb.toString();
+    }
+
     public Set<String> getDevices(){
         return this.devices;
     }
@@ -53,5 +76,4 @@ public class Domain {
     public Set<String> getUsers(){
         return this.registeredUsers;
     }
-
 }
