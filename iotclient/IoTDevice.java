@@ -127,7 +127,7 @@ public class IoTDevice {
                     receiveTemps(cmd[1]);
                 }
                 break;
-            case "RI:":
+            case "RI":
                 if (cmd.length != 2) {
                     System.out.println("Error: incorrect args\nUsage: RI <user-id>:<dev_id>");
                 } else {
