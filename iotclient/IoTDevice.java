@@ -99,28 +99,28 @@ public class IoTDevice {
                     addUser(cmd[1], cmd[2]);
                 }
                 break;
-            case "RD:":
+            case "RD":
                 if (cmd.length != 2) {
                     System.out.println("Error: incorrect args\nUsage: RD <dm>");
                 } else {
                     registerDevice(cmd[1]);
                 }
                 break;
-            case "ET:":
+            case "ET":
                 if (cmd.length != 2) {
                     System.out.println("Error: incorrect args\nUsage: ET <float>");
                 } else {
                     sendTemperature(cmd[1]);
                 }
                 break;
-            case "EI:":
+            case "EI":
                 if (cmd.length != 2) {
                     System.out.println("Error: incorrect args\nUsage: EI <filename.jpg>");
                 } else {
                     sendImage(cmd[1]);
                 }
                 break;
-            case "RT:":
+            case "RT":
                 if (cmd.length != 2) {
                     System.out.println("Error: incorrect args\nUsage: RT <dm>");
                 } else {
