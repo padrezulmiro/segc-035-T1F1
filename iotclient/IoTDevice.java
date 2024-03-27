@@ -155,7 +155,9 @@ public class IoTDevice {
             MessageCode code = (MessageCode) in.readObject();
             switch (code) {
                 case OK:
-                    Long fileSize = in.readLong(); // Read file size
+                    String s = (String) in.readObject(); // This is discarded
+                    long fileSize = (long) in.readObject(); // Read file size
+                    System.out.println("FIle size:" + fileSize);
                     // String[] dev = device.split(":");
                     String fileName = "Img_" + dev[0] + "_" + dev[1] + ".jpg";
                     FileHelper.receiveFile(fileSize, fileName, in);
