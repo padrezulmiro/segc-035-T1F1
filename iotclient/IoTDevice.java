@@ -27,6 +27,7 @@ public class IoTDevice {
     static ObjectOutputStream out;
 
     private static Scanner sc;
+
     public static void main(String[] args) {
         addCliShutdownHook();
         sc = new Scanner(System.in);
@@ -64,8 +65,8 @@ public class IoTDevice {
             System.out.println("\nCaught Ctrl-C. Shutting down.");
             try {
                 out.writeObject(MessageCode.STOP);
-                // Close socket 
-                if(clientSocket != null){
+                // Close socket
+                if (clientSocket != null) {
                     clientSocket.close();
                 }
             } catch (IOException e) {
@@ -157,17 +158,17 @@ public class IoTDevice {
                     Long fileSize = in.readLong(); // Read file size
                     // String[] dev = device.split(":");
                     String fileName = "Img_" + dev[0] + "_" + dev[1] + ".jpg";
-                    FileHelper.receiveFile(fileSize, fileName,in);
+                    FileHelper.receiveFile(fileSize, fileName, in);
                     System.out.println(MessageCode.OK.getDesc() + ", " + fileSize + " (long)"); // TODO
                     break;
                 case NODATA:
                     System.out.println(MessageCode.NODATA.getDesc());
                     break;
-                case NODM:
-                    System.out.println(MessageCode.NODM.getDesc());
-                    break;
                 case NOPERM:
                     System.out.println(MessageCode.NOPERM.getDesc());
+                    break;
+                case NOID:
+                    System.out.println(MessageCode.NOID.getDesc());
                     break;
                 default:
                     break;
@@ -187,9 +188,14 @@ public class IoTDevice {
             switch (code) {
                 case OK:
                     // Long fileSize = (long) in.readObject(); // Read file size
-                    @SuppressWarnings("unchecked") HashMap<String,Float> temps = (HashMap<String,Float>) in.readObject();
-                    for (@SuppressWarnings("unused") String s : temps.keySet());
-                    for (@SuppressWarnings("unused") Number n : temps.values());
+                    @SuppressWarnings("unchecked")
+                    HashMap<String, Float> temps = (HashMap<String, Float>) in.readObject();
+                    for (@SuppressWarnings("unused")
+                    String s : temps.keySet())
+                        ;
+                    for (@SuppressWarnings("unused")
+                    Number n : temps.values())
+                        ;
                     // reason for the empty loops: https://stackoverflow.com/a/509288
                     // essentially ClassCastException will be thrown if any of the maps is bad
 
@@ -198,8 +204,8 @@ public class IoTDevice {
                     File f = new File(fileName);
                     f.createNewFile();
                     BufferedWriter output = new BufferedWriter(new FileWriter(f));
-                    for(Map.Entry<String,Float> entry : temps.entrySet()){
-                        output.write(entry.getKey() + ": " + entry.getValue() + System.getProperty ("line.separator"));
+                    for (Map.Entry<String, Float> entry : temps.entrySet()) {
+                        output.write(entry.getKey() + ": " + entry.getValue() + System.getProperty("line.separator"));
                         output.flush();
                     }
                     // FileHelper.receiveFile(fileSize, fileName,in);
@@ -223,43 +229,10 @@ public class IoTDevice {
         }
     }
 
-    // /**
-    //  * Receive's a file from the server.
-    //  * 
-    //  * @param fileSize File size.
-    //  * @param path File path
-    //  */
-    // private static void receiveFile(Long fileSize, String path) {
-    //     try {
-    //         File f = new File(path);
-    //         f.createNewFile();
-
-    //         FileOutputStream fout = new FileOutputStream(f);
-    //         OutputStream output = new BufferedOutputStream(fout);
-
-    //         int bytesWritten = 0;
-    //         byte[] buffer = new byte[1024];
-
-    //         while (fileSize > bytesWritten) {
-    //             int bytesRead = in.read(buffer, 0, 1024);
-    //             output.write(buffer, 0, bytesRead);
-    //             output.flush();
-    //             fout.flush();
-    //             bytesWritten += bytesRead;
-    //             System.out.println(bytesWritten);
-    //         }
-    //         output.close();
-    //         fout.close();
-    //     } catch (IOException e) {
-    //         // TODO Auto-generated catch block
-    //         e.printStackTrace();
-    //     }
-    // }
-
     private static void sendImage(String imagePath) {
         try {
             out.writeObject(MessageCode.EI); // Send opcode
-            FileHelper.sendFile((imagePath),out);
+            FileHelper.sendFile((imagePath), out);
             // Receive message
             MessageCode code = (MessageCode) in.readObject();
             switch (code) {
@@ -277,39 +250,6 @@ public class IoTDevice {
             e.printStackTrace();
         }
     }
-
-    // /**
-    //  * Sends a file to the server.
-    //  * 
-    //  * @param path File path
-    //  */
-    // private static void sendFile(String path) {
-    //     File f = new File("client\\" + path);
-    //     long fileSize = f.length();
-    //     try {
-    //         // Send file name
-    //         out.writeObject(f.getName());
-    //         // Send file size
-    //         out.writeObject(fileSize);
-
-    //         FileInputStream fin = new FileInputStream(f);
-    //         InputStream input = new BufferedInputStream(fin);
-    //         // Send file
-    //         int bytesSent = 0;
-    //         byte[] buffer = new byte[1024];
-    //         while (fileSize > bytesSent) {
-    //             int bytesRead = input.read(buffer, 0, 1024);
-    //             bytesSent += bytesRead;
-    //             out.write(buffer, 0, bytesRead);
-    //             out.flush();
-    //         }
-    //         input.close();
-    //         fin.close();
-    //     } catch (IOException e) {
-    //         // TODO Auto-generated catch block
-    //         e.printStackTrace();
-    //     }
-    // }
 
     /**
      * Sends a temperature value to the server.
