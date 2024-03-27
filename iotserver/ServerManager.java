@@ -1,5 +1,5 @@
 package iotserver;
-import iohelper.FileHelper;
+
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
@@ -12,7 +12,10 @@ import java.io.ObjectInputStream;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import iohelper.FileHelper;
 import iotclient.MessageCode;
 
 public class ServerManager {
@@ -23,7 +26,15 @@ public class ServerManager {
     private static Map<String, Domain> DOMAINS; 
     private static Map<String, Device> DEVICES;
 
-    private static final String attestationFilePath = "attestation.txt"; 
+    private static ReentrantReadWriteLock rwlDomains;
+    private static Lock rlDomains;
+    private static Lock wlDomains;
+    private static ReentrantReadWriteLock rwlUsers;
+    private static Lock rlUsers;
+    private static Lock wlUsers;
+
+
+    private static final String attestationFilePath = "attestation.txt";
     private static final String domainFilePath = "domain.txt";
     private static final String userFilePath = "user.txt";
     private static final String imageDirectoryPath = "./img/";
@@ -33,10 +44,6 @@ public class ServerManager {
 
     // user/domain files
     private static File userRecord;
-    // private static Scanner userScanner;
-    // private static BufferedReader userReader;
-    // private static BufferedWriter userWriter;
-
     private static File domainRecord;
 
     private ServerManager(){
@@ -45,6 +52,14 @@ public class ServerManager {
         DOMAINS = new HashMap<>();
         DEVICES = new HashMap<>();
         // else: read from the files and populate DOMAINS/DEVICES
+
+        rwlDomains = new ReentrantReadWriteLock(true);
+        rlDomains = rwlDomains.readLock();
+        wlDomains = rwlDomains.writeLock();
+
+        rwlUsers = new ReentrantReadWriteLock(true);
+        rlUsers = rwlUsers.readLock();
+        wlUsers = rwlUsers.writeLock();
     }
 
     public static ServerManager getInstance(){
@@ -61,23 +76,18 @@ public class ServerManager {
 
                     new File(imageDirectoryPath).mkdirs();
                     new File(temperatureDirectoryPath).mkdirs();
+
                     //register attestation value
                     File clientFile = new File(attestationFilePath);
                     BufferedReader cFileReader = new BufferedReader(new FileReader(clientFile));
                     clientFileSize = Long.parseLong(cFileReader.readLine());
                     cFileReader.close();
-                    // File clientDataFile = new File(clientDataPath);
-                    // FileWriter wr = new FileWriter(clientDataFile);
-                    // wr.write(clientFile.getName());
-                    // wr.write( Long.toString(clientFile.length()));
-                    // wr.close();
 
                     userRecord = initializeFile(userFilePath);
                     readUsersFile();
 
                     domainRecord = initializeFile(domainFilePath);
                     readDomainsFile();
-                    instance.registerDeviceInDomain("ana", "Room2", "1");
                 } catch (IOException e) {
                     // TODO Auto-generated catch block
                     e.printStackTrace();
@@ -90,174 +100,176 @@ public class ServerManager {
     /*
      * CLIENT COMMANDS====================================================================================================================
      */
-    synchronized public ServerResponse createDomain(String clientUID, String domainName){
-        if (domainExists(domainName)) {
-            return new ServerResponse(MessageCode.NOK);
+    public ServerResponse createDomain(String clientUID, String domainName){
+        wlDomains.lock();
+        try {
+            if (domainExists(domainName)) {
+                return new ServerResponse(MessageCode.NOK);
+            }
+            Domain domain = new Domain(domainName, clientUID);
+            ServerManager.DOMAINS.put(domainName, domain);
+            updateDomainsFile();
+
+            return new ServerResponse(MessageCode.OK);
+        } finally {
+            wlDomains.unlock();
         }
-        Domain domain = new Domain(domainName, clientUID);
-        ServerManager.DOMAINS.put(domainName, domain);
-        updateDomainsFile();
-
-        return new ServerResponse(MessageCode.OK);
-
     }
 
-    synchronized public ServerResponse addUserToDomain(String ownderUID, String newUserID, String domainName) {
-        if (!domainExists(domainName)) {
-            return new ServerResponse(MessageCode.NODM);
-        }
+    public ServerResponse addUserToDomain(String ownderUID, String newUserID, String domainName) {
+        wlDomains.lock();
+        try {
+            if (!domainExists(domainName)) {
+                return new ServerResponse(MessageCode.NODM);
+            }
 
-        Domain domain = DOMAINS.get(domainName);
-        if (!userExists(newUserID)){
-            return new ServerResponse(MessageCode.NOUSER);
-        }
+            Domain domain = DOMAINS.get(domainName);
 
-        if (!domain.isOwner(ownderUID)) {
-            return new ServerResponse(MessageCode.NOPERM);
-        }
+            rlUsers.lock();
+            try {
+                if (!userExists(newUserID)) {
+                    return new ServerResponse(MessageCode.NOUSER);
+                }
+            } finally {
+                rlUsers.unlock();
+            }
 
-        if (domain.registerUser(newUserID)) {
-            // update DOMAINS
-            ServerManager.DOMAINS.replace(domain.getName(),domain);
-            updateDomainsFile();
-            return new ServerResponse(MessageCode.OK);
-        } else {
-            return new ServerResponse(MessageCode.USEREXISTS);
+            if (!domain.isOwner(ownderUID)) {
+                return new ServerResponse(MessageCode.NOPERM);
+            }
+
+            if (domain.registerUser(newUserID)) {
+                // update DOMAINS
+                ServerManager.DOMAINS.replace(domain.getName(), domain);
+                updateDomainsFile();
+                return new ServerResponse(MessageCode.OK);
+            } else {
+                return new ServerResponse(MessageCode.USEREXISTS);
+            }
+        } finally {
+            wlDomains.unlock();
         }
     }
 
     // devID being ID
-    synchronized public ServerResponse registerDeviceInDomain(String domainName, String userId, String devId) {
-        if (!domainExists(domainName)) {
-            return new ServerResponse(MessageCode.NODM);
-        }
-
-        Domain domain = DOMAINS.get(domainName);
-        if (!domain.isRegistered(userId)) {
-            return new ServerResponse(MessageCode.NOPERM);
-        }
-
-        String fullID = fullID(userId, devId);
-        if(domain.isDeviceRegistered(fullID)){
-            return new ServerResponse(MessageCode.DEVICEEXISTS);
-        }
-        String fullDevId = fullID(userId, devId);
-        ServerManager.DEVICES.get(fullDevId).registerInDomain(domainName);
-        domain.registerDevice(fullDevId);
-        updateDomainsFile();
-        return new ServerResponse(MessageCode.OK);
-    }
-
-
-    synchronized public ServerResponse registerTemperature(String temperatureString, String userId, String devId) {
-        float temperature;
-        String fullDevId = fullID(userId, devId);
+    public ServerResponse registerDeviceInDomain(String domainName, String userId, String devId) {
+        wlDomains.lock();
         try {
-            temperature = Float.parseFloat(temperatureString);
-        } catch (NumberFormatException e) {
-            return new ServerResponse(MessageCode.NOK);
-        }
-        ServerManager.DEVICES.get(fullDevId).registerTemperature(temperature);
-        updateDomainsFile();
-        return new ServerResponse(MessageCode.OK);
-    }
-
-    synchronized public ServerResponse registerImage(String filename, long filesize, ObjectInputStream in, String userId, String devId){
-        String fullDevId = fullID(userId, devId);
-        String fullImgPath = imageDirectoryPath+filename;
-
-        // try {
-        //     // set up file generation
-        //     File f = new File(fullImgPath);
-        //     FileOutputStream fout = new FileOutputStream(f);
-        //     OutputStream fileOutput = new BufferedOutputStream(fout);
-            
-        //     // set up buffered data reading
-        //     InputStream input = new BufferedInputStream(imageStream);
-        //     int totalBytesRead = 0;
-        //     byte[] buffer = new byte[1024];
-        //     // writing to drive
-        //     while (filesize > totalBytesRead){
-        //         int bytesRead = input.read(buffer,0,1024);
-        //         totalBytesRead += bytesRead;
-        //         fileOutput.write(buffer,0,bytesRead);
-        //         fileOutput.flush();
-        //     }
-        //     fileOutput.close();
-        //     fout.close();            
-        // } catch (Exception e) {
-        //     return new ServerResponse(MessageCode.NOK);
-        // }
-
-        FileHelper.receiveFile(filesize, fullImgPath, in);
-
-        ServerManager.DEVICES.get(fullDevId).registerImage(fullImgPath);
-        return new ServerResponse(MessageCode.OK);
-    }
-
-    synchronized public ServerResponse getTemperatures(String user, String domainName) throws IOException {
-        Domain dom = ServerManager.DOMAINS.get(domainName);
-        if (dom == null){
-            return new ServerResponse(MessageCode.NODM); 
-        }
-        if (dom.isRegistered(user)){
-            Map<String,Float> temps = getTempList(dom);
-            // for (String name: temps.keySet()) {
-            //     String key = name.toString();
-            //     String value = temps.get(name).toString();
-            //     System.out.println(key + " " + value);
-            // }
-            // // write into File
-            // String tempFilePath = temperatureDirectoryPath+"temps_" + domainName + ".txt";
-            // File tempFile = new File(tempFilePath);
-            // BufferedWriter tempWriter = new BufferedWriter(new FileWriter(tempFile));
-
-            // for(Entry<String, Float> entry : temps.entrySet()){
-            //     tempWriter.write(entry.getKey() + ":" + entry.getValue() +System.getProperty ("line.separator"));
-            //     tempWriter.flush();
-
-            // tempWriter.close();
-
-            // // FileHelper.sendFile(tempFilePath, out);
-            // return new ServerResponse(MessageCode.OK,tempFilePath);
-            return new ServerResponse(MessageCode.OK,temps);
-        }
-        return new ServerResponse(MessageCode.NOPERM);
-    }
-
-    synchronized public ServerResponse getImage(String user,String targetUserId, String targetDevId) {
-        String targetDevFullId = fullID(targetUserId, targetDevId);
-        Device dev = DEVICES.get(targetDevFullId);
-        if (dev == null){
-            return new ServerResponse(MessageCode.NOID);
-        }
-
-        String filepath = dev.getImagePath();
-        if (filepath == null){
-            return new ServerResponse(MessageCode.NODATA);
-        }
-
-        // if it's the device's own image, return file
-        if (user.equals(targetUserId)){
-            return new ServerResponse(MessageCode.OK,filepath);
-        }
-
-        //if user isnt target device + does not exist in any of the target domain, return NOPERM
-        for (String dom : dev.getDomains()){
-            Domain domain = DOMAINS.get(dom);
-            if (domain.isRegistered(user)){
-                return new ServerResponse(MessageCode.OK,filepath);
+            if (!domainExists(domainName)) {
+                return new ServerResponse(MessageCode.NODM);
             }
-        }
-        return new ServerResponse(MessageCode.NOPERM);
 
+            Domain domain = DOMAINS.get(domainName);
+            if (!domain.isRegistered(userId)) {
+                return new ServerResponse(MessageCode.NOPERM);
+            }
+
+            String fullID = fullID(userId, devId);
+            if (domain.isDeviceRegistered(fullID)) {
+                return new ServerResponse(MessageCode.DEVICEEXISTS);
+            }
+            String fullDevId = fullID(userId, devId);
+            ServerManager.DEVICES.get(fullDevId).registerInDomain(domainName);
+            domain.registerDevice(fullDevId);
+            updateDomainsFile();
+            return new ServerResponse(MessageCode.OK);
+        } finally {
+            wlDomains.unlock();
+        }
     }
 
-    synchronized private boolean domainExists(String domainName) {
+
+    public ServerResponse registerTemperature(String temperatureString, String userId, String devId) {
+        wlDomains.lock();
+        try {
+            float temperature;
+            String fullDevId = fullID(userId, devId);
+            try {
+                temperature = Float.parseFloat(temperatureString);
+            } catch (NumberFormatException e) {
+                return new ServerResponse(MessageCode.NOK);
+            }
+            ServerManager.DEVICES.get(fullDevId).registerTemperature(temperature);
+            updateDomainsFile();
+            return new ServerResponse(MessageCode.OK);
+        } finally {
+            wlDomains.unlock();
+        }
+    }
+
+    public ServerResponse registerImage(String filename, long filesize, ObjectInputStream in, String userId, String devId){
+        wlDomains.lock();
+        try {
+            String fullDevId = fullID(userId, devId);
+            String fullImgPath = imageDirectoryPath + filename;
+
+            FileHelper.receiveFile(filesize, fullImgPath, in);
+
+            ServerManager.DEVICES.get(fullDevId).registerImage(fullImgPath);
+            return new ServerResponse(MessageCode.OK);
+        } finally {
+            wlDomains.unlock();
+        }
+    }
+
+    public ServerResponse getTemperatures(String user, String domainName) throws IOException {
+        rlDomains.lock();
+        try {
+            Domain dom = ServerManager.DOMAINS.get(domainName);
+            if (dom == null) {
+                return new ServerResponse(MessageCode.NODM);
+            }
+
+            if (dom.isRegistered(user)) {
+                Map<String, Float> temps = getTempList(dom);
+                return new ServerResponse(MessageCode.OK, temps);
+            }
+
+            return new ServerResponse(MessageCode.NOPERM);
+        } finally {
+            rlDomains.unlock();
+        }
+    }
+
+    public ServerResponse getImage(String user,String targetUserId, String targetDevId) {
+        rlDomains.lock();
+        try {
+            String targetDevFullId = fullID(targetUserId, targetDevId);
+            Device dev = DEVICES.get(targetDevFullId);
+            if (dev == null) {
+                return new ServerResponse(MessageCode.NOID);
+            }
+
+            String filepath = dev.getImagePath();
+            if (filepath == null) {
+                return new ServerResponse(MessageCode.NODATA);
+            }
+
+            // if it's the device's own image, return file
+            if (user.equals(targetUserId)) {
+                return new ServerResponse(MessageCode.OK, filepath);
+            }
+
+            // if user isnt target device + does not exist in any of the target domain,
+            // return NOPERM
+            for (String dom : dev.getDomains()) {
+                Domain domain = DOMAINS.get(dom);
+                if (domain.isRegistered(user)) {
+                    return new ServerResponse(MessageCode.OK, filepath);
+                }
+            }
+            return new ServerResponse(MessageCode.NOPERM);
+
+        } finally {
+            rlDomains.unlock();
+        }
+    }
+
+    private boolean domainExists(String domainName) {
         return DOMAINS.containsKey(domainName);
     }
 
-    synchronized private Map<String,Float> getTempList(Domain domain){
+    private Map<String,Float> getTempList(Domain domain){
         Set<String> devices = domain.getDevices();
         Map<String,Float> tempMap = new HashMap<String,Float>();
         for (String userStr : devices){
@@ -281,7 +293,7 @@ public class ServerManager {
     }
 
     //should be called every time DOMAIN is changed
-    synchronized public boolean updateDomainsFile(){
+    private boolean updateDomainsFile(){
         // writes updated DOMAINS to file
         StringBuilder sb = new StringBuilder();
         for (Domain domain : ServerManager.DOMAINS.values()) {
@@ -299,7 +311,7 @@ public class ServerManager {
         return true;
     }
 
-    synchronized public boolean updateUsersFile() throws IOException{
+    public boolean updateUsersFile() throws IOException{
         BufferedWriter userWriter = new BufferedWriter(new FileWriter(userRecord));
         for(Map.Entry<String,String> entry : USERS.entrySet()){
            userWriter.write(entry.getKey()+":"+entry.getValue()+System.getProperty ("line.separator"));
@@ -309,7 +321,7 @@ public class ServerManager {
         return true; 
     }
 
-    synchronized public static void readDomainsFile() throws IOException{
+    private static void readDomainsFile() throws IOException{
         final char SP = ':';
         final char TAB = '\t';
 
@@ -376,7 +388,7 @@ public class ServerManager {
         if (!imagePath.equals("")) {device.registerImage(imagePath);}
     }
 
-    synchronized public static void readUsersFile() throws IOException{
+    private static void readUsersFile() throws IOException{
         BufferedReader userReader = new BufferedReader(new FileReader(userRecord));
         // why would this empty it all.
         // ref: https://stackoverflow.com/questions/17244713/using-filewriter-and-bufferedwriter-clearing-file-for-some-reason
@@ -392,7 +404,7 @@ public class ServerManager {
      * UTILITY==================================================================
      */
 
-    synchronized public static Device getDevice(String fullId){
+    public static Device getDevice(String fullId){
         return ServerManager.DEVICES.get(fullId);
     }
 
@@ -404,57 +416,79 @@ public class ServerManager {
      *AUTHENTICATION====================================================================================================================
      */
 
-    synchronized public void registerUser(String user, String pwd) throws IOException{
+    public void registerUser(String user, String pwd) throws IOException{
         USERS.put(user, pwd);
         updateUsersFile();
     }
 
-    synchronized public void registerDevice(String fullDevId, Device dev) throws IOException{
+    public void registerDevice(String fullDevId, Device dev) throws IOException{
         dev.goOnline();
         DEVICES.put(fullDevId,dev);
     }
 
-    public synchronized ServerResponse authenticateUser(String user, String pwd)throws IOException{
-
-        if (userExists(user)){
-            if(USERS.get(user).equals(pwd)){
-                return  new ServerResponse(MessageCode.OK_USER);
+    public ServerResponse authenticateUser(String user, String pwd) throws IOException {
+        rlUsers.lock();
+        try {
+            if (userExists(user)) {
+                if (USERS.get(user).equals(pwd)) {
+                    return new ServerResponse(MessageCode.OK_USER);
+                }
+                return new ServerResponse(MessageCode.WRONG_PWD);
             }
-                return  new ServerResponse(MessageCode.WRONG_PWD);
+        } finally {
+            rlUsers.unlock();
         }
-        registerUser(user,pwd);
-        return  new ServerResponse(MessageCode.OK_NEW_USER);
+
+        wlUsers.lock();
+        try {
+            registerUser(user, pwd);
+            return new ServerResponse(MessageCode.OK_NEW_USER);
+        } finally {
+            wlUsers.unlock();
+        }
     }
 
-    synchronized private boolean userExists(String userID) {
+    private boolean userExists(String userID) {
         return USERS.containsKey(userID);
     }
 
     public void disconnectDevice(String userID, String devID){
-        String fullID = fullID(userID, devID);
-        DEVICES.get(fullID).goOffline();
+        wlDomains.lock();
+        try {
+            String fullID = fullID(userID, devID);
+            DEVICES.get(fullID).goOffline();
+        } finally {
+            wlDomains.lock();
+        }
     }
 
     //assumes userId exists
-    public synchronized ServerResponse authenticateDevice(String userId, String devId)throws IOException{
-        String fullDevId = fullID(userId, devId);
-        if(DEVICES.containsKey(fullDevId)){
-            Device dev = DEVICES.get(fullDevId);
-            System.out.println("devid:" + fullDevId);
-            if(dev.isOnline()){
-                System.out.println("dev is online");
-                return new ServerResponse(MessageCode.NOK_DEVID);
-            }else{
-                registerDevice(fullDevId,dev);
-                return new ServerResponse(MessageCode.OK_DEVID);
+    public ServerResponse authenticateDevice(String userId, String devId)throws IOException{
+        wlDomains.lock();
+        wlUsers.lock();
+        try {
+            String fullDevId = fullID(userId, devId);
+            if (DEVICES.containsKey(fullDevId)) {
+                Device dev = DEVICES.get(fullDevId);
+                System.out.println("devid:" + fullDevId);
+                if (dev.isOnline()) {
+                    System.out.println("dev is online");
+                    return new ServerResponse(MessageCode.NOK_DEVID);
+                } else {
+                    registerDevice(fullDevId, dev);
+                    return new ServerResponse(MessageCode.OK_DEVID);
+                }
             }
+            Device dev = new Device(fullDevId);
+            registerDevice(fullDevId, dev);
+            return new ServerResponse(MessageCode.OK_DEVID);
+        } finally {
+            wlDomains.unlock();
+            wlUsers.lock();
         }
-        Device dev = new Device(fullDevId);
-        registerDevice(fullDevId,dev);
-        return new ServerResponse(MessageCode.OK_DEVID);
     }
 
-    public synchronized ServerResponse testDevice(String devFileName, long devFileSize)throws IOException{
+    public ServerResponse testDevice(String devFileName, long devFileSize)throws IOException{
         if (devFileName.equals(clientFileName) && devFileSize==clientFileSize){
             return new ServerResponse(MessageCode.OK_TESTED);
         }

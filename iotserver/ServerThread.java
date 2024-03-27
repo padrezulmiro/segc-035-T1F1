@@ -1,19 +1,12 @@
 package iotserver;
 
-import iohelper.FileHelper;
-import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
-import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.io.OutputStream;
 import java.net.Socket;
-import java.util.List;
 
 import iotclient.MessageCode;
+import iohelper.FileHelper;
 
 public class ServerThread extends Thread {
     private Socket socket;
