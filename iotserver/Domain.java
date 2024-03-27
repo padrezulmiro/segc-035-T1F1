@@ -1,8 +1,6 @@
 package iotserver;
 
-import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
 public class Domain {
@@ -16,7 +14,6 @@ public class Domain {
         this.ownerId = ownerId;
         this.registeredUsers = new HashSet<>();
         this.devices = new HashSet<>();
-        // registerUser(ownerId);
     }
 
     public boolean registerUser(String userId) {
@@ -37,10 +34,6 @@ public class Domain {
     public boolean registerDevice(String deviceFullID) {
         return devices.add(deviceFullID);
     }
-
-    // public void registerTemperature(float temperature) {
-    //     temperatures.add(temperature);
-    // }
 
     public boolean isDeviceRegistered(String device) {
         return devices.contains(device);
