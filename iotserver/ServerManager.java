@@ -368,7 +368,6 @@ public class ServerManager {
         String temperature = tokens[2];
         String imagePath = tokens[3];
         String fullId = uid + SP + did;
-        System.out.println(fullId);
 
         Device device = ServerManager.DEVICES.containsKey(fullId) ?
             ServerManager.DEVICES.get(fullId) : new Device(fullId);
@@ -458,7 +457,7 @@ public class ServerManager {
             String fullID = fullID(userID, devID);
             DEVICES.get(fullID).goOffline();
         } finally {
-            wlDomains.lock();
+            wlDomains.unlock();
         }
     }
 
@@ -484,7 +483,7 @@ public class ServerManager {
             return new ServerResponse(MessageCode.OK_DEVID);
         } finally {
             wlDomains.unlock();
-            wlUsers.lock();
+            wlUsers.unlock();
         }
     }
 

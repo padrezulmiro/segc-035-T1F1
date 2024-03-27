@@ -116,8 +116,6 @@ public class ServerThread extends Thread {
                         break;
                 }
             }
-
-
         } catch (IOException e) {
             e.printStackTrace();
         } catch (ClassNotFoundException e) {
