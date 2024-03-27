@@ -23,20 +23,19 @@ public class ServerManager {
     private static Map<String, Domain> DOMAINS; 
     private static Map<String, Device> DEVICES;
 
+    private static final String attestationFilePath = "attestation.txt"; 
     private static final String domainFilePath = "domain.txt";
     private static final String userFilePath = "user.txt";
     private static final String imageDirectoryPath = "./img/";
     private static final String temperatureDirectoryPath = "./temp/";
-
-    //TODO: fill this in?
-    private static String clientFileName;
+    private static final String clientFileName = "IoTDevice.jar";
     private static Long clientFileSize;
 
     // user/domain files
     private static File userRecord;
     // private static Scanner userScanner;
-    private static BufferedReader userReader;
-    private static BufferedWriter userWriter;
+    // private static BufferedReader userReader;
+    // private static BufferedWriter userWriter;
 
     private static File domainRecord;
 
@@ -62,22 +61,19 @@ public class ServerManager {
 
                     new File(imageDirectoryPath).mkdirs();
                     new File(temperatureDirectoryPath).mkdirs();
-                    File clientFile = new File("./bin/iotclient/IoTDevice.class");
+                    //register attestation value
+                    File clientFile = new File(attestationFilePath);
+                    BufferedReader cFileReader = new BufferedReader(new FileReader(clientFile));
+                    clientFileSize = Long.parseLong(cFileReader.readLine());
+                    cFileReader.close();
                     // File clientDataFile = new File(clientDataPath);
-                    clientFileName = clientFile.getName();
-                    clientFileSize = clientFile.length();
                     // FileWriter wr = new FileWriter(clientDataFile);
                     // wr.write(clientFile.getName());
                     // wr.write( Long.toString(clientFile.length()));
                     // wr.close();
 
                     userRecord = initializeFile(userFilePath);
-                    userReader = new BufferedReader(new FileReader(userRecord));
-                    // userWriter = new BufferedWriter(new FileWriter(userRecord,true));
-                    // why would this empty it all.
-                    // ref: https://stackoverflow.com/questions/17244713/using-filewriter-and-bufferedwriter-clearing-file-for-some-reason
                     readUsersFile();
-                    userReader.close();
 
                     domainRecord = initializeFile(domainFilePath);
                     readDomainsFile();
@@ -304,11 +300,12 @@ public class ServerManager {
     }
 
     synchronized public boolean updateUsersFile() throws IOException{
-        userWriter = new BufferedWriter(new FileWriter(userRecord));
+        BufferedWriter userWriter = new BufferedWriter(new FileWriter(userRecord));
         for(Map.Entry<String,String> entry : USERS.entrySet()){
            userWriter.write(entry.getKey()+":"+entry.getValue()+System.getProperty ("line.separator"));
            userWriter.flush();
         }
+        userWriter.close();
         return true; 
     }
 
@@ -380,11 +377,15 @@ public class ServerManager {
     }
 
     synchronized public static void readUsersFile() throws IOException{
+        BufferedReader userReader = new BufferedReader(new FileReader(userRecord));
+        // why would this empty it all.
+        // ref: https://stackoverflow.com/questions/17244713/using-filewriter-and-bufferedwriter-clearing-file-for-some-reason
         String line;
         while (( line = userReader.readLine()) != null) {
             String[]id = line.split(":");
             USERS.put(id[0],id[1]);
         }
+        userReader.close();
     }
 
     /*

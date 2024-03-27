@@ -26,6 +26,8 @@ public class IoTDevice {
     static ObjectInputStream in;
     static ObjectOutputStream out;
 
+    private static final String deviceJar = "IoTDevice.jar";
+
     private static Scanner sc;
     public static void main(String[] args) {
         addCliShutdownHook();
@@ -435,7 +437,7 @@ public class IoTDevice {
      */
     private static void testDevice() {
         try {
-            File iotFile = new File("./bin/iotclient/IoTDevice.class");
+            File iotFile = new File(deviceJar);
             // Send Test Device message
             out.writeObject(MessageCode.TD);
             // Send IoTDevice file name
@@ -445,6 +447,7 @@ public class IoTDevice {
             // Long mock_size = (long) 3;
             // out.writeLong(mock_size);
             // Receive message
+            System.out.println(iotFile.getName() + ": " + iotFile.length());
             out.flush();
             MessageCode code = (MessageCode) in.readObject();
             switch (code) {

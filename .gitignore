@@ -24,6 +24,8 @@ hs_err_pid*
 replay_pid*
 
 bin/
+img/
+
 domain.txt
 user.txt
 .vscode
