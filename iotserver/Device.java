@@ -2,7 +2,6 @@ package iotserver;
 
 import java.util.HashSet;
 import java.util.Set;
-import iohelper.FileHelper;
 
 public class Device {
     private String userId;
@@ -46,7 +45,6 @@ public class Device {
 
     public void registerImage(String imgPath) {
         this.imgPath=imgPath;
-        throw new UnsupportedOperationException();
     }
 
     public void registerInDomain(String domainName) {

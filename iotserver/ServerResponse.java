@@ -24,6 +24,7 @@ public class ServerResponse  {
 
     public ServerResponse(MessageCode code, String filePath) {
         this.code = code;
+        this.filePath= filePath;
         File file = new File(filePath);
         this.fileSize = file.length();
         try {
@@ -35,7 +36,7 @@ public class ServerResponse  {
 
     public ServerResponse(MessageCode code, Map<String,Float> temps){
         this.code = code;
-        this.temperatures = new HashMap<String,Float>();
+        this.temperatures = temps;
     }
 
     public MessageCode responseCode() {

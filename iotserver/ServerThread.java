@@ -84,6 +84,7 @@ public class ServerThread extends Thread {
                         String tempStr = (String)in.readObject();
                         res = manager.registerTemperature(tempStr,this.userID,this.deviceID).responseCode();
                         out.writeObject(res);
+                        out.flush();
                         break;
                     case EI:
                         // input image stream
@@ -106,10 +107,18 @@ public class ServerThread extends Thread {
                     case RI:
                         String targetUser = (String)in.readObject();
                         String targetDev = (String)in.readObject();
-                        sResponse = manager.getImage(this.userID,targetUser, targetDev);
+                        ServerResponse sr = manager.getImage(this.userID,targetUser, targetDev);
+                        MessageCode rCode=sr.responseCode();
+                        // Send code to client
+                        out.writeObject(rCode);
+                        // Send file (if aplicable)
+                        if( rCode == MessageCode.OK){
+                            FileHelper.sendFile(sr.filePath(), out);
+                        }
                         break;
                     case STOP:
                         System.out.println("Client quits. killing thread");
+                        manager.disconnectDevice(this.userID, this.deviceID);
                         isRunning = false;
                         break;
                 }
