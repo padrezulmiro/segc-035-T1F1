@@ -1,5 +1,5 @@
 #!/bin/bash
-#Script generated with the help of gpt. mvp
+
 file_path="IoTDevice.jar"
 output_file="attestation.txt"
 
