@@ -116,7 +116,8 @@ public class ServerManager {
         }
     }
 
-    public ServerResponse addUserToDomain(String ownderUID, String newUserID, String domainName) {
+    public ServerResponse addUserToDomain(String ownderUID, String newUserID,
+            String domainName) {
         wlDomains.lock();
         try {
             if (!domainExists(domainName)) {
@@ -152,7 +153,8 @@ public class ServerManager {
     }
 
     // devID being ID
-    public ServerResponse registerDeviceInDomain(String domainName, String userId, String devId) {
+    public ServerResponse registerDeviceInDomain(String domainName,
+            String userId, String devId) {
         wlDomains.lock();
         try {
             if (!domainExists(domainName)) {
@@ -179,7 +181,8 @@ public class ServerManager {
     }
 
 
-    public ServerResponse registerTemperature(String temperatureString, String userId, String devId) {
+    public ServerResponse registerTemperature(String temperatureString,
+            String userId, String devId) {
         wlDomains.lock();
         try {
             float temperature;
@@ -197,7 +200,8 @@ public class ServerManager {
         }
     }
 
-    public ServerResponse registerImage(String filename, long filesize, ObjectInputStream in, String userId, String devId){
+    public ServerResponse registerImage(String filename, long filesize,
+            ObjectInputStream in, String userId, String devId) {
         wlDomains.lock();
         try {
             String fullDevId = fullID(userId, devId);
@@ -212,7 +216,8 @@ public class ServerManager {
         }
     }
 
-    public ServerResponse getTemperatures(String user, String domainName) throws IOException {
+    public ServerResponse getTemperatures(String user, String domainName)
+            throws IOException {
         rlDomains.lock();
         try {
             Domain dom = ServerManager.DOMAINS.get(domainName);
@@ -231,7 +236,8 @@ public class ServerManager {
         }
     }
 
-    public ServerResponse getImage(String user,String targetUserId, String targetDevId) {
+    public ServerResponse getImage(String user, String targetUserId,
+            String targetDevId) {
         rlDomains.lock();
         try {
             String targetDevFullId = fullID(targetUserId, targetDevId);
@@ -420,12 +426,13 @@ public class ServerManager {
         updateUsersFile();
     }
 
-    public void registerDevice(String fullDevId, Device dev) throws IOException{
+    public void registerDevice(String fullDevId, Device dev) throws IOException {
         dev.goOnline();
         DEVICES.put(fullDevId,dev);
     }
 
-    public ServerResponse authenticateUser(String user, String pwd) throws IOException {
+    public ServerResponse authenticateUser(String user, String pwd)
+            throws IOException {
         rlUsers.lock();
         try {
             if (userExists(user)) {
@@ -462,7 +469,8 @@ public class ServerManager {
     }
 
     //assumes userId exists
-    public ServerResponse authenticateDevice(String userId, String devId)throws IOException{
+    public ServerResponse authenticateDevice(String userId, String devId)
+            throws IOException {
         wlDomains.lock();
         wlUsers.lock();
         try {
@@ -487,7 +495,8 @@ public class ServerManager {
         }
     }
 
-    public ServerResponse testDevice(String devFileName, long devFileSize)throws IOException{
+    public ServerResponse testDevice(String devFileName, long devFileSize)
+            throws IOException {
         if (devFileName.equals(clientFileName) && devFileSize==clientFileSize){
             return new ServerResponse(MessageCode.OK_TESTED);
         }
