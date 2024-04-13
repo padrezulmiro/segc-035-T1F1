@@ -5,7 +5,8 @@ import java.net.ServerSocket;
 import java.net.Socket;
 
 public class IoTServer {
-    public static final ServerManager SERVERMANAGER = ServerManager.getInstance();
+    public static final ServerManager SERVER_MANAGER =
+        ServerManager.getInstance();
 
     private static final int ARG_NUM = 1;
 

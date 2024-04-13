@@ -33,7 +33,6 @@ public class ServerManager {
     private static Lock rlUsers;
     private static Lock wlUsers;
 
-
     private static final String attestationFilePath = "attestation.txt";
     private static final String domainFilePath = "domain.txt";
     private static final String userFilePath = "user.txt";
@@ -116,7 +115,7 @@ public class ServerManager {
         }
     }
 
-    public ServerResponse addUserToDomain(String ownderUID, String newUserID,
+    public ServerResponse addUserToDomain(String ownerUID, String newUserID,
             String domainName) {
         wlDomains.lock();
         try {
@@ -135,7 +134,7 @@ public class ServerManager {
                 rlUsers.unlock();
             }
 
-            if (!domain.isOwner(ownderUID)) {
+            if (!domain.isOwner(ownerUID)) {
                 return new ServerResponse(MessageCode.NOPERM);
             }
 
