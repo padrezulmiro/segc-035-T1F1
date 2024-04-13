@@ -40,6 +40,14 @@ public class DomainsStorage {
         throw new UnsupportedOperationException();
     }
 
+    public boolean isUserRegisteredInDomain() {
+        throw new UnsupportedOperationException();
+    }
+
+    public boolean isDeviceRegisteredInDomain() {
+        throw new UnsupportedOperationException();
+    }
+
     public void readLock() {
         rLock.lock();
     }
