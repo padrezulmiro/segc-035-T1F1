@@ -3,6 +3,7 @@ package iotserver;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.PrintWriter;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.locks.Lock;
 
@@ -16,36 +17,57 @@ public class DomainStorage {
         throw new UnsupportedOperationException();
     }
 
-    public void addDomain() {
-        throw new UnsupportedOperationException();
+    public void addDomain(String domainName, String ownerUID) {
+        Domain domain = new Domain(domainName, ownerUID);
+        domains.put(domainName, domain);
+        updateDomainsFile();
     }
 
-    public void addUserToDomain() {
-        throw new UnsupportedOperationException();
+    public boolean addUserToDomain(String requesterUID, String newUserID,
+            String domainName) {
+        Domain domain = domains.get(domainName);
+        boolean wasRegistered = domain.registerUser(newUserID);
+        if (wasRegistered) updateDomainsFile();
+        return wasRegistered;
     }
 
-    public void addDeviceToDomain() {
-        throw new UnsupportedOperationException();
+    public void addDeviceToDomain(String userID, String devID,
+            String domainName) {
+        Domain domain = domains.get(domainName);
+        domain.registerDevice(Utils.fullID(userID, devID));
     }
 
-    public Map<String, Float> temperatures() {
-        throw new UnsupportedOperationException();
+    public Map<String, Float> temperatures(String domainName,
+            DeviceStorage devStorage) {
+        Domain domain = domains.get(domainName);
+        Map<String, Float> temperatures = new HashMap<>();
+
+        for (String devID : domain.getDevices()) {
+            float devTemperature = devStorage.getDeviceTemperature(devID);
+            temperatures.put(devID, devTemperature);
+        }
+
+        return temperatures;
     }
 
-    public boolean domainExists() {
-        throw new UnsupportedOperationException();
+    public boolean domainExists(String domainName) {
+        return domains.containsKey(domainName);
     }
 
-    public boolean isOwnerOfDomain() {
-        throw new UnsupportedOperationException();
+    public boolean isOwnerOfDomain(String userID, String domainName) {
+        Domain domain = domains.get(domainName);
+        return domain.isOwner(userID);
     }
 
-    public boolean isUserRegisteredInDomain() {
-        throw new UnsupportedOperationException();
+    public boolean isUserRegisteredInDomain(String userID, String domainName) {
+        Domain domain = domains.get(domainName);
+        return domain.isRegistered(userID);
     }
 
-    public boolean isDeviceRegisteredInDomain() {
-        throw new UnsupportedOperationException();
+    public boolean isDeviceRegisteredInDomain(String userID, String devID,
+            String domainName) {
+        Domain domain = domains.get(domainName);
+        return domain.isDeviceRegistered(Utils.fullID(userID, devID));
     }
 
     public void readLock() {

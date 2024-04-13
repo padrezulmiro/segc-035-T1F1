@@ -21,4 +21,8 @@ public class Utils {
 
         return blocks.toArray(new String[occurrences]);
     }
+
+    public static String fullID(String userId, String devId){
+        return (userId + ":" + devId);
+    }
 }
