@@ -6,13 +6,13 @@ import java.io.PrintWriter;
 import java.util.Map;
 import java.util.concurrent.locks.Lock;
 
-public class DomainsStorage {
+public class DomainStorage {
     private Map<String, Domain> domains;
     private File domainsFile;
     private Lock wLock;
     private Lock rLock;
 
-    public DomainsStorage() {
+    public DomainStorage() {
         throw new UnsupportedOperationException();
     }
 
