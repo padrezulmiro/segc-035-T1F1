@@ -21,10 +21,12 @@ import iotclient.MessageCode;
 public class ServerManager {
     private static volatile ServerManager instance;
 
-    private DomainStorage domainStorage;
+    private DomainStorage domStorage;
+    private DeviceStorage devStorage;
+
     // FIXME change these to private again and getters
     private static Map<String, String> USERS;
-    private static Map<String, Domain> DOMAINS; 
+    private static Map<String, Domain> DOMAINS;
     private static Map<String, Device> DEVICES;
 
     private static ReentrantReadWriteLock rwlDomains;
@@ -47,7 +49,8 @@ public class ServerManager {
     private static File domainRecord;
 
     private ServerManager(){
-        domainStorage = new DomainStorage(domainFilePath);
+        domStorage = new DomainStorage(domainFilePath);
+        devStorage = new DeviceStorage();
 
         // check if the files exists. if not, create the files
         USERS = new HashMap<>();
@@ -103,26 +106,25 @@ public class ServerManager {
      * CLIENT COMMANDS====================================================================================================================
      */
     public ServerResponse createDomain(String ownerUID, String domainName){
-        domainStorage.writerLock();
+        domStorage.writeLock();
         try {
-            if (domainStorage.domainExists(domainName)) {
+            if (domStorage.domainExists(domainName)) {
                 return new ServerResponse(MessageCode.NOK);
             }
 
-            domainStorage.addDomain(domainName, ownerUID);
-
+            domStorage.addDomain(domainName, ownerUID);
             return new ServerResponse(MessageCode.OK);
         } finally {
-            domainStorage.writerUnlock();
+            domStorage.writeUnlock();
         }
     }
 
     public ServerResponse addUserToDomain(String requesterUID, String newUserID,
             String domainName) {
-        domainStorage.writerLock();
+        domStorage.writeLock();
         rlUsers.lock();
         try {
-            if (!domainStorage.domainExists(domainName)) {
+            if (!domStorage.domainExists(domainName)) {
                 return new ServerResponse(MessageCode.NODM);
             }
 
@@ -130,64 +132,57 @@ public class ServerManager {
                 return new ServerResponse(MessageCode.NOUSER);
             }
 
-            if (!domainStorage.isOwnerOfDomain(requesterUID, domainName)) {
+            if (!domStorage.isOwnerOfDomain(requesterUID, domainName)) {
                 return new ServerResponse(MessageCode.NOPERM);
             }
 
-            boolean wasRegistered = domainStorage.addUserToDomain(requesterUID,
-                    newUserID, domainName);
-            if (wasRegistered) {
+            boolean ret = domStorage.addUserToDomain(requesterUID, newUserID,
+                    domainName);
+            if (ret) {
                 return new ServerResponse(MessageCode.OK);
             } else {
                 return new ServerResponse(MessageCode.USEREXISTS);
             }
         } finally {
             rlUsers.unlock();
-            domainStorage.writerUnlock();
+            domStorage.writeUnlock();
         }
     }
 
     // devID being ID
     public ServerResponse registerDeviceInDomain(String domainName,
             String userId, String devId) {
-        domainStorage.writerLock();
+        domStorage.writeLock();
+        devStorage.writeLock();
         try {
-            if (!domainStorage.domainExists(domainName)) {
+            if (!domStorage.domainExists(domainName)) {
                 return new ServerResponse(MessageCode.NODM);
             }
 
-            if (!domainStorage.isUserRegisteredInDomain(userId, domainName)) {
+            if (!domStorage.isUserRegisteredInDomain(userId, domainName)) {
                 return new ServerResponse(MessageCode.NOPERM);
             }
 
-            if (domainStorage.isDeviceRegisteredInDomain(userId, devId,
+            if (domStorage.isDeviceRegisteredInDomain(userId, devId,
                     domainName)) {
                 return new ServerResponse(MessageCode.DEVICEEXISTS);
             }
 
-            domainStorage.addDeviceToDomain(userId, devId, domainName);
-
-            String fullDevId = fullID(userId, devId);
-            ServerManager.DEVICES.get(fullDevId).registerInDomain(domainName);
-
+            domStorage.addDeviceToDomain(userId, devId, domainName);
+            devStorage.addDomainToDevice(userId, devId, domainName);
             return new ServerResponse(MessageCode.OK);
         } finally {
-            domainStorage.writerUnlock();
+            devStorage.writeUnlock();
+            domStorage.writeUnlock();
         }
     }
 
 
-    public ServerResponse registerTemperature(String temperatureString,
-            String userId, String devId) {
+    public ServerResponse registerTemperature(float temperature, String userId,
+            String devId) {
         wlDomains.lock();
         try {
-            float temperature;
-            String fullDevId = fullID(userId, devId);
-            try {
-                temperature = Float.parseFloat(temperatureString);
-            } catch (NumberFormatException e) {
-                return new ServerResponse(MessageCode.NOK);
-            }
+            String fullDevId = Utils.fullID(userId, devId);
             ServerManager.DEVICES.get(fullDevId).registerTemperature(temperature);
             updateDomainsFile();
             return new ServerResponse(MessageCode.OK);
@@ -214,21 +209,26 @@ public class ServerManager {
 
     public ServerResponse getTemperatures(String user, String domainName)
             throws IOException {
-        rlDomains.lock();
+        domStorage.readLock();
+        devStorage.readLock();
         try {
             Domain dom = ServerManager.DOMAINS.get(domainName);
-            if (dom == null) {
+            if (!domStorage.domainExists(domainName)) {
                 return new ServerResponse(MessageCode.NODM);
             }
 
-            if (dom.isRegistered(user)) {
-                Map<String, Float> temps = getTempList(dom);
-                return new ServerResponse(MessageCode.OK, temps);
+            if (!domStorage.isUserRegisteredInDomain(user, domainName)) {
+                return new ServerResponse(MessageCode.NOPERM);
             }
 
-            return new ServerResponse(MessageCode.NOPERM);
+            Map<String, Float> temps = domStorage.temperatures(domainName,
+                    devStorage);
+
+            //XXX ServerResponse is being init with a Map?
+            return new ServerResponse(MessageCode.OK, temps);
         } finally {
-            rlDomains.unlock();
+            devStorage.readUnlock();
+            domStorage.readUnlock();
         }
     }
 
@@ -265,16 +265,6 @@ public class ServerManager {
         } finally {
             rlDomains.unlock();
         }
-    }
-
-    private Map<String,Float> getTempList(Domain domain){
-        Set<String> devices = domain.getDevices();
-        Map<String,Float> tempMap = new HashMap<String,Float>();
-        for (String userStr : devices){
-            Device dev = DEVICES.get(userStr);
-            tempMap.put(userStr, dev.getTemperature());
-        }
-        return tempMap;
     }
 
     /*
