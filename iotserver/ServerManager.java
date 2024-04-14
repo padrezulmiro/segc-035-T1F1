@@ -21,6 +21,7 @@ import iotclient.MessageCode;
 public class ServerManager {
     private static volatile ServerManager instance;
 
+    private DomainStorage domainStorage;
     // FIXME change these to private again and getters
     private static Map<String, String> USERS;
     private static Map<String, Domain> DOMAINS; 
@@ -46,6 +47,8 @@ public class ServerManager {
     private static File domainRecord;
 
     private ServerManager(){
+        domainStorage = new DomainStorage(domainFilePath);
+
         // check if the files exists. if not, create the files
         USERS = new HashMap<>();
         DOMAINS = new HashMap<>();
@@ -99,83 +102,77 @@ public class ServerManager {
     /*
      * CLIENT COMMANDS====================================================================================================================
      */
-    public ServerResponse createDomain(String clientUID, String domainName){
-        wlDomains.lock();
+    public ServerResponse createDomain(String ownerUID, String domainName){
+        domainStorage.writerLock();
         try {
-            if (domainExists(domainName)) {
+            if (domainStorage.domainExists(domainName)) {
                 return new ServerResponse(MessageCode.NOK);
             }
-            Domain domain = new Domain(domainName, clientUID);
-            ServerManager.DOMAINS.put(domainName, domain);
-            updateDomainsFile();
+
+            domainStorage.addDomain(domainName, ownerUID);
 
             return new ServerResponse(MessageCode.OK);
         } finally {
-            wlDomains.unlock();
+            domainStorage.writerUnlock();
         }
     }
 
-    public ServerResponse addUserToDomain(String ownerUID, String newUserID,
+    public ServerResponse addUserToDomain(String requesterUID, String newUserID,
             String domainName) {
-        wlDomains.lock();
+        domainStorage.writerLock();
+        rlUsers.lock();
         try {
-            if (!domainExists(domainName)) {
+            if (!domainStorage.domainExists(domainName)) {
                 return new ServerResponse(MessageCode.NODM);
             }
 
-            Domain domain = DOMAINS.get(domainName);
-
-            rlUsers.lock();
-            try {
-                if (!userExists(newUserID)) {
-                    return new ServerResponse(MessageCode.NOUSER);
-                }
-            } finally {
-                rlUsers.unlock();
+            if (!userExists(newUserID)) {
+                return new ServerResponse(MessageCode.NOUSER);
             }
 
-            if (!domain.isOwner(ownerUID)) {
+            if (!domainStorage.isOwnerOfDomain(requesterUID, domainName)) {
                 return new ServerResponse(MessageCode.NOPERM);
             }
 
-            if (domain.registerUser(newUserID)) {
-                // update DOMAINS
-                ServerManager.DOMAINS.replace(domain.getName(), domain);
-                updateDomainsFile();
+            boolean wasRegistered = domainStorage.addUserToDomain(requesterUID,
+                    newUserID, domainName);
+            if (wasRegistered) {
                 return new ServerResponse(MessageCode.OK);
             } else {
                 return new ServerResponse(MessageCode.USEREXISTS);
             }
         } finally {
-            wlDomains.unlock();
+            rlUsers.unlock();
+            domainStorage.writerUnlock();
         }
     }
 
     // devID being ID
     public ServerResponse registerDeviceInDomain(String domainName,
             String userId, String devId) {
-        wlDomains.lock();
+        domainStorage.writerLock();
         try {
-            if (!domainExists(domainName)) {
+            if (!domainStorage.domainExists(domainName)) {
                 return new ServerResponse(MessageCode.NODM);
             }
 
-            Domain domain = DOMAINS.get(domainName);
-            if (!domain.isRegistered(userId)) {
+            if (!domainStorage.isUserRegisteredInDomain(userId, domainName)) {
                 return new ServerResponse(MessageCode.NOPERM);
             }
 
-            String fullID = fullID(userId, devId);
-            if (domain.isDeviceRegistered(fullID)) {
+            if (domainStorage.isDeviceRegisteredInDomain(userId, devId,
+                    domainName)) {
                 return new ServerResponse(MessageCode.DEVICEEXISTS);
             }
+
+            domainStorage.addDeviceToDomain(userId, devId, domainName);
+
             String fullDevId = fullID(userId, devId);
             ServerManager.DEVICES.get(fullDevId).registerInDomain(domainName);
-            domain.registerDevice(fullDevId);
-            updateDomainsFile();
+
             return new ServerResponse(MessageCode.OK);
         } finally {
-            wlDomains.unlock();
+            domainStorage.writerUnlock();
         }
     }
 
@@ -268,10 +265,6 @@ public class ServerManager {
         } finally {
             rlDomains.unlock();
         }
-    }
-
-    private boolean domainExists(String domainName) {
-        return DOMAINS.containsKey(domainName);
     }
 
     private Map<String,Float> getTempList(Domain domain){

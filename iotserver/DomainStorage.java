@@ -14,8 +14,8 @@ public class DomainStorage {
     private Lock wLock;
     private Lock rLock;
 
-    public DomainStorage(String domainsFilePath) {
-        domainsFile = new File(domainsFilePath);
+    public DomainStorage(String domainFilePath) {
+        domainsFile = new File(domainFilePath);
         ReentrantReadWriteLock rwLock = new ReentrantReadWriteLock(true);
         wLock = rwLock.writeLock();
         rLock = rwLock.readLock();
@@ -30,15 +30,17 @@ public class DomainStorage {
     public boolean addUserToDomain(String requesterUID, String newUserID,
             String domainName) {
         Domain domain = domains.get(domainName);
-        boolean wasRegistered = domain.registerUser(newUserID);
-        if (wasRegistered) updateDomainsFile();
-        return wasRegistered;
+        boolean ret = domain.registerUser(newUserID);
+        if (ret) updateDomainsFile();
+        return ret;
     }
 
-    public void addDeviceToDomain(String userID, String devID,
+    public boolean addDeviceToDomain(String userID, String devID,
             String domainName) {
         Domain domain = domains.get(domainName);
-        domain.registerDevice(Utils.fullID(userID, devID));
+        boolean ret = domain.registerDevice(Utils.fullID(userID, devID));
+        if (ret) updateDomainsFile();
+        return ret;
     }
 
     public Map<String, Float> temperatures(String domainName,
