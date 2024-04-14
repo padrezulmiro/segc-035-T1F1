@@ -25,4 +25,12 @@ public class Utils {
     public static String fullID(String userId, String devId){
         return (userId + ":" + devId);
     }
+
+    public static String userIDFromFullID(String fullDevID) {
+        return fullDevID.split(":")[0];
+    }
+
+    public static String devIDFromFullID(String fullDevID) {
+        return fullDevID.split(":")[1];
+    }
 }
