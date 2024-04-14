@@ -9,6 +9,8 @@ import iotclient.MessageCode;
 import iohelper.FileHelper;
 
 public class ServerThread extends Thread {
+    private static final String IMAGE_DIR_PATH = "./img/";
+
     private Socket socket;
     private ObjectOutputStream out;
     private ObjectInputStream in;
@@ -111,7 +113,13 @@ public class ServerThread extends Thread {
     private void registerImage() throws IOException, ClassNotFoundException {
         String filename = (String)in.readObject();
         long fileSize = (long)in.readObject();
-        MessageCode res = manager.registerImage(filename,fileSize,in,this.userID,this.deviceID).responseCode();
+        String fullImgPath = IMAGE_DIR_PATH + filename;
+
+        FileHelper.receiveFile(fileSize, fullImgPath, in);
+
+        MessageCode res = manager
+            .registerImage(filename, this.userID, this.deviceID)
+            .responseCode();
         out.writeObject(res);
     }
 

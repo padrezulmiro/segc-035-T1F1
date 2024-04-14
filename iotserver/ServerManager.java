@@ -189,19 +189,14 @@ public class ServerManager {
         }
     }
 
-    public ServerResponse registerImage(String filename, long filesize,
-            ObjectInputStream in, String userId, String devId) {
-        wlDomains.lock();
+    public ServerResponse registerImage(String filename, String userId,
+            String devId) {
+        devStorage.writeLock();
         try {
-            String fullDevId = fullID(userId, devId);
-            String fullImgPath = imageDirectoryPath + filename;
-
-            FileHelper.receiveFile(filesize, fullImgPath, in);
-
-            ServerManager.DEVICES.get(fullDevId).registerImage(fullImgPath);
+            devStorage.saveDeviceImage(userId, devId, filename);
             return new ServerResponse(MessageCode.OK);
         } finally {
-            wlDomains.unlock();
+            devStorage.writeUnlock();
         }
     }
 

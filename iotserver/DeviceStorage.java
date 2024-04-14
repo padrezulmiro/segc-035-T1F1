@@ -31,8 +31,8 @@ public class DeviceStorage {
         devices.get(Utils.fullID(userID, devID)).registerInDomain(domainName);
     }
 
-    public void saveDeviceImage() {
-        throw new UnsupportedOperationException();
+    public void saveDeviceImage(String userID, String devID, String imgPath) {
+        devices.get(Utils.fullID(userID, devID)).registerImage(imgPath);
     }
 
     public void getDeviceImage() {
