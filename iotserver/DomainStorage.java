@@ -16,6 +16,7 @@ public class DomainStorage {
 
     public DomainStorage(String domainFilePath) {
         domainsFile = new File(domainFilePath);
+        domains = new HashMap<>();
         ReentrantReadWriteLock rwLock = new ReentrantReadWriteLock(true);
         wLock = rwLock.writeLock();
         rLock = rwLock.readLock();
@@ -45,12 +46,19 @@ public class DomainStorage {
 
     public Map<String, Float> temperatures(String domainName,
             DeviceStorage devStorage) {
+        //FIXME A better implementation doesn't need access to devStorage
+        // This can be achieved by refactoring the domain's registered devices
+        // as a Set<Device> instead of Set<String>
+
         Domain domain = domains.get(domainName);
         Map<String, Float> temperatures = new HashMap<>();
 
-        for (String devID : domain.getDevices()) {
-            float devTemperature = devStorage.getDeviceTemperature(devID);
-            temperatures.put(devID, devTemperature);
+        for (String fullDevID : domain.getDevices()) {
+            String userID = Utils.userIDFromFullID(fullDevID);
+            String devID = Utils.devIDFromFullID(fullDevID);
+            float devTemperature =
+                devStorage.getDeviceTemperature(userID, devID);
+            temperatures.put(fullDevID, devTemperature);
         }
 
         return temperatures;
@@ -84,11 +92,11 @@ public class DomainStorage {
         rLock.unlock();
     }
 
-    public void writerLock() {
+    public void writeLock() {
         wLock.lock();
     }
 
-    public void writerUnlock() {
+    public void writeUnlock() {
         wLock.unlock();
     }
 
@@ -108,5 +116,9 @@ public class DomainStorage {
         } catch (FileNotFoundException e) {
             e.printStackTrace();
         }
+    }
+
+    private void populateDomainsFromFile() {
+        throw new UnsupportedOperationException();
     }
 }
