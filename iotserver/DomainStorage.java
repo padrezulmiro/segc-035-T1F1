@@ -6,6 +6,7 @@ import java.io.PrintWriter;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 public class DomainStorage {
     private Map<String, Domain> domains;
@@ -13,8 +14,11 @@ public class DomainStorage {
     private Lock wLock;
     private Lock rLock;
 
-    public DomainStorage() {
-        throw new UnsupportedOperationException();
+    public DomainStorage(String domainsFilePath) {
+        domainsFile = new File(domainsFilePath);
+        ReentrantReadWriteLock rwLock = new ReentrantReadWriteLock(true);
+        wLock = rwLock.writeLock();
+        rLock = rwLock.readLock();
     }
 
     public void addDomain(String domainName, String ownerUID) {
