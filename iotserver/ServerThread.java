@@ -116,8 +116,19 @@ public class ServerThread extends Thread {
     }
 
     private void registerTemperature() throws IOException, ClassNotFoundException {
-        String tempStr = (String)in.readObject();
-        MessageCode res = manager.registerTemperature(tempStr,this.userID,this.deviceID).responseCode();
+        String tempStr = (String) in.readObject();
+        float temperature;
+        try {
+            temperature = Float.parseFloat(tempStr);
+        } catch (NumberFormatException e) {
+            out.writeObject(new ServerResponse(MessageCode.NOK));
+            out.flush();
+            return;
+        }
+
+        MessageCode res = manager
+            .registerTemperature(temperature, this.userID, this.deviceID)
+            .responseCode();
         out.writeObject(res);
         out.flush();
     }

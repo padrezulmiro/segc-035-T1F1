@@ -11,7 +11,6 @@ import java.io.PrintWriter;
 import java.io.ObjectInputStream;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
@@ -38,6 +37,7 @@ public class ServerManager {
 
     private static final String attestationFilePath = "attestation.txt";
     private static final String domainFilePath = "domain.txt";
+    private static final String deviceFilePath = "device.txt";
     private static final String userFilePath = "user.txt";
     private static final String imageDirectoryPath = "./img/";
     private static final String temperatureDirectoryPath = "./temp/";
@@ -50,7 +50,7 @@ public class ServerManager {
 
     private ServerManager(){
         domStorage = new DomainStorage(domainFilePath);
-        devStorage = new DeviceStorage();
+        devStorage = new DeviceStorage(deviceFilePath);
 
         // check if the files exists. if not, create the files
         USERS = new HashMap<>();
@@ -180,14 +180,12 @@ public class ServerManager {
 
     public ServerResponse registerTemperature(float temperature, String userId,
             String devId) {
-        wlDomains.lock();
+        devStorage.writeLock();
         try {
-            String fullDevId = Utils.fullID(userId, devId);
-            ServerManager.DEVICES.get(fullDevId).registerTemperature(temperature);
-            updateDomainsFile();
+            devStorage.saveDeviceTemperature(userId, devId, temperature);
             return new ServerResponse(MessageCode.OK);
         } finally {
-            wlDomains.unlock();
+            devStorage.writeUnlock();
         }
     }
 
