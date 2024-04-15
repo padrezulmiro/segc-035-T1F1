@@ -1,6 +1,11 @@
 package iotserver;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.locks.Lock;
@@ -15,7 +20,13 @@ public class DeviceStorage {
     public DeviceStorage(String deviceFilePath) {
         devices = new HashMap<>();
         devicesFile = new File(deviceFilePath);
-        populateDevicesFromFile();
+
+        try {
+            populateDevicesFromFile();
+        } catch (IOException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
 
         ReentrantReadWriteLock rwLock = new ReentrantReadWriteLock(true);
         wLock = rwLock.writeLock();
@@ -82,10 +93,38 @@ public class DeviceStorage {
     }
 
     private void updateDevicesFile() {
-        throw new UnsupportedOperationException();
+        StringBuilder sb = new StringBuilder();
+        for (Device device : devices.values()) {
+            sb.append(device.toString());
+        }
+
+        try (PrintWriter pw = new PrintWriter(devicesFile)) {
+            pw.write(sb.toString());
+            pw.close();
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }
     }
 
-    private void populateDevicesFromFile() {
-        throw new UnsupportedOperationException();
+    private void populateDevicesFromFile() throws IOException {
+        final char SP = ':';
+
+        BufferedReader reader = new BufferedReader(new FileReader(devicesFile));
+        String[] lines = (String[]) reader.lines().toArray(String[]::new);
+        reader.close();
+
+        for (int i = 0; i < lines.length; i++) {
+            String[] tokens = Utils.split(lines[i], SP);
+            String uid = tokens[0];
+            String did = tokens[1];
+            float temperature = Float.parseFloat(tokens[2]);
+            String imagePath = tokens[3];
+
+            Device device = new Device(uid, did);
+            device.registerTemperature(temperature);
+            device.registerImage(imagePath);
+
+            devices.put(Utils.fullID(uid, did), device);
+        }
     }
 }
