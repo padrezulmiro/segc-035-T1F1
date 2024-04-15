@@ -8,13 +8,11 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.io.ObjectInputStream;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-import iohelper.FileHelper;
 import iotclient.MessageCode;
 
 public class ServerManager {
@@ -225,38 +223,29 @@ public class ServerManager {
         }
     }
 
-    public ServerResponse getImage(String user, String targetUserId,
-            String targetDevId) {
-        rlDomains.lock();
+    public ServerResponse getImage(String requesterUID, String targetUID,
+            String targetDID) {
+        domStorage.readLock();
+        devStorage.readLock();
         try {
-            String targetDevFullId = fullID(targetUserId, targetDevId);
-            Device dev = DEVICES.get(targetDevFullId);
-            if (dev == null) {
+            if (!devStorage.deviceExists(targetUID, targetDID)) {
                 return new ServerResponse(MessageCode.NOID);
             }
 
-            String filepath = dev.getImagePath();
+            String filepath = devStorage.getDeviceImage(targetUID, targetDID);
             if (filepath == null) {
                 return new ServerResponse(MessageCode.NODATA);
             }
 
-            // if it's the device's own image, return file
-            if (user.equals(targetUserId)) {
+            if (domStorage.hasAccessToDevice(requesterUID, targetUID,
+                    targetDID)) {
                 return new ServerResponse(MessageCode.OK, filepath);
             }
 
-            // if user isnt target device + does not exist in any of the target domain,
-            // return NOPERM
-            for (String dom : dev.getDomains()) {
-                Domain domain = DOMAINS.get(dom);
-                if (domain.isRegistered(user)) {
-                    return new ServerResponse(MessageCode.OK, filepath);
-                }
-            }
             return new ServerResponse(MessageCode.NOPERM);
-
         } finally {
-            rlDomains.unlock();
+            domStorage.readLock();
+            devStorage.readLock();
         }
     }
 

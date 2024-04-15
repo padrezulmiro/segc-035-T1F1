@@ -100,6 +100,21 @@ public class DomainStorage {
         wLock.unlock();
     }
 
+    public boolean hasAccessToDevice(String user, String devUID, String devDID) {
+        boolean hasAccess = false;
+        String fullID = Utils.fullID(devUID, devDID);
+
+        for (Domain domain : domains.values()) {
+            if (!domain.isDeviceRegistered(fullID)) continue;
+            if (domain.isRegistered(user)) {
+                hasAccess = true;
+                break;
+            }
+        }
+
+        return user.equals(devUID) || hasAccess;
+    }
+
     private Domain getDomain() {
         throw new UnsupportedOperationException();
     }

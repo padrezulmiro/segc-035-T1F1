@@ -13,8 +13,10 @@ public class DeviceStorage {
     private Lock rLock;
 
     public DeviceStorage(String deviceFilePath) {
-        devicesFile = new File(deviceFilePath);
         devices = new HashMap<>();
+        devicesFile = new File(deviceFilePath);
+        populateDevicesFromFile();
+
         ReentrantReadWriteLock rwLock = new ReentrantReadWriteLock(true);
         wLock = rwLock.writeLock();
         rLock = rwLock.readLock();
@@ -24,23 +26,27 @@ public class DeviceStorage {
         Device device = new Device(userID, devID);
         device.goOnline();
         devices.put(Utils.fullID(userID, devID), device);
+        updateDevicesFile();
     }
 
     public void addDomainToDevice(String userID, String devID,
             String domainName) {
         devices.get(Utils.fullID(userID, devID)).registerInDomain(domainName);
+        updateDevicesFile();
     }
 
     public void saveDeviceImage(String userID, String devID, String imgPath) {
         devices.get(Utils.fullID(userID, devID)).registerImage(imgPath);
+        updateDevicesFile();
     }
 
-    public void getDeviceImage() {
-        throw new UnsupportedOperationException();
+    public String getDeviceImage(String userID, String devID) {
+        return devices.get(Utils.fullID(userID, devID)).getImagePath();
     }
 
     public void saveDeviceTemperature(String userID, String devID, float temp) {
         devices.get(Utils.fullID(userID, devID)).registerTemperature(temp);
+        updateDevicesFile();
     }
 
     public float getDeviceTemperature(String userID, String devID) {
