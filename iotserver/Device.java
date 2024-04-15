@@ -55,10 +55,6 @@ public class Device {
         temp = temperature;
     }
 
-    public String getFilepath(){
-        return this.imgPath;
-    }
-
     public Float getTemperature(){
         return this.temp;
     }
