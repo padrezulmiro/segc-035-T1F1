@@ -1,7 +1,10 @@
 package iotserver;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.HashMap;
 import java.util.Map;
@@ -17,6 +20,13 @@ public class DomainStorage {
     public DomainStorage(String domainFilePath) {
         domainsFile = new File(domainFilePath);
         domains = new HashMap<>();
+        try {
+            populateDomainsFromFile();
+        } catch (IOException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+
         ReentrantReadWriteLock rwLock = new ReentrantReadWriteLock(true);
         wLock = rwLock.writeLock();
         rLock = rwLock.readLock();
@@ -115,10 +125,6 @@ public class DomainStorage {
         return user.equals(devUID) || hasAccess;
     }
 
-    private Domain getDomain() {
-        throw new UnsupportedOperationException();
-    }
-
     private void updateDomainsFile(){
         StringBuilder sb = new StringBuilder();
         for (Domain domain : domains.values()) {
@@ -133,7 +139,43 @@ public class DomainStorage {
         }
     }
 
-    private void populateDomainsFromFile() {
-        throw new UnsupportedOperationException();
+    private void populateDomainsFromFile() throws IOException {
+        final char SP = ':';
+        final char TAB = '\t';
+
+        BufferedReader reader = new BufferedReader(new FileReader(domainsFile));
+        String[] lines = (String[]) reader.lines().toArray(String[]::new);
+        reader.close();
+
+        String currentDomainName = null;
+        for (int i = 0; i < lines.length; i++) {
+            String line = lines[i];
+            boolean isDomainLine = line.charAt(0) != TAB;
+            String[] tokens = Utils.split(line, SP);
+
+            if (isDomainLine) {
+                currentDomainName = tokens[0];
+                initDomainFromLine(tokens);
+            } else {
+                String devUID = tokens[0];
+                String devDID = tokens[1];
+                domains
+                    .get(currentDomainName)
+                    .registerDevice(Utils.fullID(devUID, devDID));
+            }
+        }
+    }
+
+    private void initDomainFromLine(String[] tokens) {
+        String domainName = tokens[0];
+        String owner = tokens[1];
+
+        Domain domain = new Domain(domainName, owner);
+        for (int j = 2; j < tokens.length; j++) {
+            String user = tokens[j];
+            domain.registerUser(user);
+        }
+
+        domains.put(domainName, domain);
     }
 }
