@@ -244,8 +244,8 @@ public class ServerManager {
 
             return new ServerResponse(MessageCode.NOPERM);
         } finally {
-            domStorage.readLock();
-            devStorage.readLock();
+            domStorage.readUnlock();
+            devStorage.readUnlock();
         }
     }
 
