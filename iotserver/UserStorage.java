@@ -56,6 +56,22 @@ public class UserStorage {
         }
     }
 
+    public void readLock() {
+        rLock.lock();
+    }
+
+    public void readUnlock() {
+        rLock.unlock();
+    }
+
+    public void writeLock() {
+        wLock.lock();
+    }
+
+    public void writeUnlock() {
+        wLock.unlock();
+    }
+
     private void populateUsersFromFile() throws IOException {
         BufferedReader reader = new BufferedReader(new FileReader(usersFile));
         String[] lines = (String[]) reader.lines().toArray(String[]::new);

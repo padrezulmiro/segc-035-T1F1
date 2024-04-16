@@ -20,6 +20,7 @@ public class ServerManager {
 
     private DomainStorage domStorage;
     private DeviceStorage devStorage;
+    private UserStorage userStorage;
 
     // FIXME change these to private again and getters
     private static Map<String, String> USERS;
@@ -49,6 +50,7 @@ public class ServerManager {
     private ServerManager(){
         domStorage = new DomainStorage(domainFilePath);
         devStorage = new DeviceStorage(deviceFilePath);
+        userStorage = new UserStorage(userFilePath);
 
         // check if the files exists. if not, create the files
         USERS = new HashMap<>();
@@ -120,13 +122,13 @@ public class ServerManager {
     public ServerResponse addUserToDomain(String requesterUID, String newUserID,
             String domainName) {
         domStorage.writeLock();
-        rlUsers.lock();
+        userStorage.readLock();
         try {
             if (!domStorage.domainExists(domainName)) {
                 return new ServerResponse(MessageCode.NODM);
             }
 
-            if (!userExists(newUserID)) {
+            if (!userStorage.isUserRegistered(newUserID)) {
                 return new ServerResponse(MessageCode.NOUSER);
             }
 
@@ -134,15 +136,15 @@ public class ServerManager {
                 return new ServerResponse(MessageCode.NOPERM);
             }
 
-            boolean ret = domStorage.addUserToDomain(requesterUID, newUserID,
-                    domainName);
+            boolean ret = domStorage
+                .addUserToDomain(requesterUID, newUserID, domainName);
             if (ret) {
                 return new ServerResponse(MessageCode.OK);
             } else {
                 return new ServerResponse(MessageCode.USEREXISTS);
             }
         } finally {
-            rlUsers.unlock();
+            userStorage.readUnlock();
             domStorage.writeUnlock();
         }
     }
@@ -244,8 +246,8 @@ public class ServerManager {
 
             return new ServerResponse(MessageCode.NOPERM);
         } finally {
-            domStorage.readUnlock();
             devStorage.readUnlock();
+            domStorage.readUnlock();
         }
     }
 
@@ -260,25 +262,6 @@ public class ServerManager {
             System.out.println("File created: " + fileCreated.getName());
         }
         return fileCreated;
-    }
-
-    //should be called every time DOMAIN is changed
-    private boolean updateDomainsFile(){
-        // writes updated DOMAINS to file
-        StringBuilder sb = new StringBuilder();
-        for (Domain domain : ServerManager.DOMAINS.values()) {
-            sb.append(domain.toString());
-        }
-
-        try (PrintWriter pw = new PrintWriter(domainRecord)) {
-            pw.write(sb.toString());
-            pw.close();
-        } catch (FileNotFoundException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-        }
-
-        return true;
     }
 
     public boolean updateUsersFile() throws IOException{
@@ -370,24 +353,11 @@ public class ServerManager {
     }
 
     /*
-     * UTILITY==================================================================
-     */
-
-    public static Device getDevice(String fullId){
-        return ServerManager.DEVICES.get(fullId);
-    }
-
-    private static String fullID(String userId, String devId){
-        return (userId+":"+devId);
-    }
-
-    /*
      *AUTHENTICATION====================================================================================================================
      */
 
     public void registerUser(String user, String pwd) throws IOException{
-        USERS.put(user, pwd);
-        updateUsersFile();
+        userStorage.registerUser(user);
     }
 
     public void registerDevice(String fullDevId, Device dev) throws IOException {
@@ -425,7 +395,7 @@ public class ServerManager {
     public void disconnectDevice(String userID, String devID){
         wlDomains.lock();
         try {
-            String fullID = fullID(userID, devID);
+            String fullID = Utils.fullID(userID, devID);
             DEVICES.get(fullID).goOffline();
         } finally {
             wlDomains.unlock();
@@ -438,10 +408,11 @@ public class ServerManager {
         wlDomains.lock();
         wlUsers.lock();
         try {
-            String fullDevId = fullID(userId, devId);
+            String fullDevId = Utils.fullID(userId, devId);
             if (DEVICES.containsKey(fullDevId)) {
                 Device dev = DEVICES.get(fullDevId);
                 System.out.println("devid:" + fullDevId);
+
                 if (dev.isOnline()) {
                     System.out.println("dev is online");
                     return new ServerResponse(MessageCode.NOK_DEVID);
@@ -454,8 +425,8 @@ public class ServerManager {
             registerDevice(fullDevId, dev);
             return new ServerResponse(MessageCode.OK_DEVID);
         } finally {
-            wlDomains.unlock();
             wlUsers.unlock();
+            wlDomains.unlock();
         }
     }
 
