@@ -20,6 +20,13 @@ public class DomainStorage {
     public DomainStorage(String domainFilePath) {
         domainsFile = new File(domainFilePath);
         domains = new HashMap<>();
+
+        try {
+            domainsFile.createNewFile();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
         try {
             populateDomainsFromFile();
         } catch (IOException e) {

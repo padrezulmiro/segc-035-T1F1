@@ -25,6 +25,12 @@ public class UserStorage {
         rLock = rwLock.readLock();
 
         try {
+            usersFile.createNewFile();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        try {
             populateUsersFromFile();
         } catch (IOException e) {
             // TODO Auto-generated catch block

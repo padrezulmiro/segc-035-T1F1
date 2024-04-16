@@ -22,6 +22,12 @@ public class DeviceStorage {
         devicesFile = new File(deviceFilePath);
 
         try {
+            devicesFile.createNewFile();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        try {
             populateDevicesFromFile();
         } catch (IOException e) {
             // TODO Auto-generated catch block
@@ -66,6 +72,10 @@ public class DeviceStorage {
 
     public boolean deviceExists(String userID, String devID) {
         return devices.containsKey(Utils.fullID(userID, devID));
+    }
+
+    public boolean isDeviceOnline(String userID, String devID) {
+        return devices.get(Utils.fullID(userID, devID)).isOnline();
     }
 
     public void activateDevice(String userID, String devID) {

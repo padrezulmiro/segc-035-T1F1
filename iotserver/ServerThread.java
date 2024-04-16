@@ -44,7 +44,7 @@ public class ServerThread extends Thread {
                         authDevice();
                         break;
                     case TD:
-                        testDevice();
+                        attestClient();
                         break;
                     case CREATE:
                         createDomain();
@@ -160,7 +160,7 @@ public class ServerThread extends Thread {
         out.writeObject(res);
     }
 
-    private void testDevice() throws IOException, ClassNotFoundException {
+    private void attestClient() throws IOException, ClassNotFoundException {
         String fileName = (String)in.readObject();
         long fileSize = (long)in.readLong();
         MessageCode res = manager.testDevice(fileName, fileSize).responseCode();
@@ -180,6 +180,6 @@ public class ServerThread extends Thread {
             this.userID = (String) in.readObject();
         }
         String pwd = (String) in.readObject();
-        out.writeObject(manager.authenticateUser(userID,pwd).responseCode());
+        out.writeObject(manager.authenticateUser(userID).responseCode());
     }
 }
