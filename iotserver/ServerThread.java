@@ -163,7 +163,9 @@ public class ServerThread extends Thread {
     private void attestClient() throws IOException, ClassNotFoundException {
         String fileName = (String)in.readObject();
         long fileSize = (long)in.readLong();
-        MessageCode res = manager.testDevice(fileName, fileSize).responseCode();
+        MessageCode res = manager
+            .attestClient(fileName, fileSize)
+            .responseCode();
         out.writeObject(res);
         // System.out.println("Correct " + res + "filename=" + fileName + " size=" + fileSize);
     }
