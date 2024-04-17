@@ -21,7 +21,6 @@ public class IoTDevice {
     private static final int DEFAULT_PORT = 12345;
     static String userid;
     static String devid;
-    static String password;
     static Socket clientSocket = null;
     static ObjectInputStream in;
     static ObjectOutputStream out;
@@ -34,22 +33,21 @@ public class IoTDevice {
         addCliShutdownHook();
         sc = new Scanner(System.in);
         // Check arguments
-        if (args.length < 3) {
+        if (args.length < 6) {
             System.out.println(
-                    "Error: not enough args!\nUsage: IoTDevice <serverAddress> <dev-id> <user-id>\n");
+                    "Error: not enough args!\nUsage: IoTDevice <serverAddress> <truststore> <keystore> <passwordkeystore> <dev-id> <user-id>\n");//<serverAddress> <dev-id> <user-id>\n");
             System.exit(1);
         }
         String serverAddress = args[0];
-        devid = args[1];
-        userid = args[2];
-
-        // Ask for pswd
-        System.out.println("Password for " + userid + ":");
-        password = sc.nextLine();
+        String truststore = args[1];
+        String keystore = args[2];
+        String psw_keystore = args[3];
+        devid = args[4];
+        userid = args[5];
 
         // Connection & Authentication
         if (connect(serverAddress)) {
-            userAuth(userid, password);
+            //userAuth(userid, password);
             deviceAuth(devid);
             testDevice();
             printMenu();
