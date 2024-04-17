@@ -7,11 +7,12 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Scanner;
+import javax.net.ssl.SSLSocket;
+import javax.net.ssl.SSLSocketFactory;
 
 /**
  * Um cliente IoT é um programa – chamemos-lhe IoTDevice – que representa um
@@ -21,7 +22,7 @@ public class IoTDevice {
     private static final int DEFAULT_PORT = 12345;
     static String userid;
     static String devid;
-    static Socket clientSocket = null;
+    static SSLSocket clientSocket = null;
     static ObjectInputStream in;
     static ObjectOutputStream out;
 
@@ -441,7 +442,11 @@ public class IoTDevice {
         // Try server connection
         System.out.println("Connecting to server.");
         try {
-            Socket clientSocket = new Socket(addr, port);
+            SSLSocketFactory factory =
+                (SSLSocketFactory)SSLSocketFactory.getDefault();
+            SSLSocket clientSocket =
+                (SSLSocket)factory.createSocket(addr, port);
+            //Socket clientSocket = new Socket(addr, port);
             System.out.println("Connection successful - " + addr + ":" + port);
             in = new ObjectInputStream(clientSocket.getInputStream()); // the line that prompts the closed socket
                                                                        // exceptionsocket
