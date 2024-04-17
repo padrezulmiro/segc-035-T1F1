@@ -49,9 +49,10 @@ public class UserStorage {
     }
 
     private void updateUsersFile() {
+        final String NL = "\n";
         StringBuilder sb = new StringBuilder();
         for (String s: users) {
-            sb.append(s);
+            sb.append(s + NL);
         }
 
         try (PrintWriter pw = new PrintWriter(usersFile)) {
@@ -83,6 +84,10 @@ public class UserStorage {
         String[] lines = (String[]) reader.lines().toArray(String[]::new);
         reader.close();
 
-        for (String user: lines) registerUser(user);
+        for (String line: lines) {
+            String[] tokens  = Utils.split(line, ':');
+            String user = tokens[0];
+            registerUser(user);
+        }
     }
 }

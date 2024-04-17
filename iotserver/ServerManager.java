@@ -14,6 +14,7 @@ public class ServerManager {
     private DomainStorage domStorage;
     private DeviceStorage devStorage;
     private UserStorage userStorage;
+    private Long clientFileSize;
 
     private static final String attestationFilePath = "attestation.txt";
     private static final String domainFilePath = "domain.txt";
@@ -22,7 +23,6 @@ public class ServerManager {
     private static final String imageDirectoryPath = "./img/";
     private static final String temperatureDirectoryPath = "./temp/";
     private static final String clientFileName = "IoTDevice.jar";
-    private static Long clientFileSize;
 
     private ServerManager(){
         domStorage = new DomainStorage(domainFilePath);
