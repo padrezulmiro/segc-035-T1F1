@@ -67,7 +67,7 @@ public class Domain {
         sb.append(NL);
 
         for (String devFullId : devices) {
-            sb.append(TAB + devFullId);
+            sb.append(TAB + devFullId + NL);
         }
 
         return sb.toString();
