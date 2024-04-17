@@ -85,57 +85,64 @@ public class IoTDevice {
      */
     private static void executeCommand(String command) {
         // First word is the command
-        String[] cmd = command.split(" ");
+        String[] cmds = command.split(" ");
+        String op = cmds[0].toUpperCase();
 
-        switch (cmd[0]) {
+        switch (op) {
+            case "C":
             case "CREATE":
-                if (cmd.length != 2) {
+                if (cmds.length != 2) {
                     System.out.println("Error: incorrect args\nUsage: CREATE <dm>");
                 } else {
-                    createDomain(cmd[1]);
+                    createDomain(cmds[1]);
                 }
                 break;
+            case "A":
             case "ADD":
-                if (cmd.length != 3) {
+                if (cmds.length != 3) {
                     System.out.println("Error: incorrect args\nUsage: ADD <user1> <dm>");
                 } else {
-                    addUser(cmd[1], cmd[2]);
+                    addUser(cmds[1], cmds[2]);
                 }
                 break;
             case "RD":
-                if (cmd.length != 2) {
+                if (cmds.length != 2) {
                     System.out.println("Error: incorrect args\nUsage: RD <dm>");
                 } else {
-                    registerDevice(cmd[1]);
+                    registerDevice(cmds[1]);
                 }
                 break;
             case "ET":
-                if (cmd.length != 2) {
+                if (cmds.length != 2) {
                     System.out.println("Error: incorrect args\nUsage: ET <float>");
                 } else {
-                    sendTemperature(cmd[1]);
+                    sendTemperature(cmds[1]);
                 }
                 break;
             case "EI":
-                if (cmd.length != 2) {
+                if (cmds.length != 2) {
                     System.out.println("Error: incorrect args\nUsage: EI <filename.jpg>");
                 } else {
-                    sendImage(cmd[1]);
+                    sendImage(cmds[1]);
                 }
                 break;
             case "RT":
-                if (cmd.length != 2) {
+                if (cmds.length != 2) {
                     System.out.println("Error: incorrect args\nUsage: RT <dm>");
                 } else {
-                    receiveTemps(cmd[1]);
+                    receiveTemps(cmds[1]);
                 }
                 break;
             case "RI":
-                if (cmd.length != 2) {
+                if (cmds.length != 2) {
                     System.out.println("Error: incorrect args\nUsage: RI <user-id>:<dev_id>");
                 } else {
-                    receiveImage(cmd[1]);
+                    receiveImage(cmds[1]);
                 }
+                break;
+            case "H":
+            case "HELP":
+                printMenu();
                 break;
             default:
                 System.out.println("That command does not exist.");
@@ -209,7 +216,7 @@ public class IoTDevice {
                     f.createNewFile();
                     BufferedWriter output = new BufferedWriter(new FileWriter(f));
                     for (Map.Entry<String, Float> entry : temps.entrySet()) {
-                        output.write(entry.getKey() + ": " + entry.getValue() + System.getProperty("line.separator"));
+                        output.write(entry.getKey() + ":" + entry.getValue() + System.getProperty("line.separator"));
                         output.flush();
                     }
                     // FileHelper.receiveFile(fileSize, fileName,in);
@@ -425,6 +432,7 @@ public class IoTDevice {
                 + " do domínio <dm>, desde que o utilizador tenha permissões.");
         System.out.println("RI <user-id>:<dev_id> # Receber o ficheiro Imagem do dispositivo "
                 + "<user-id>:<dev_id> do servidor, desde que o utilizador tenha permissões.");
+        System.out.println("HELP # Monstrar este menu.");
 
     }
 
