@@ -3,42 +3,72 @@ package iotserver;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import javax.net.ServerSocketFactory;
+import javax.net.ssl.SSLServerSocket;
+import javax.net.ssl.SSLServerSocketFactory;
 
 public class IoTServer {
-    public static final ServerManager SERVER_MANAGER =
-        ServerManager.getInstance();
+    public static final ServerManager SERVER_MANAGER = ServerManager
+        .getInstance();
 
-    private static final int ARG_NUM = 1;
-
-    private int port;
-    private ServerSocket socket;
+    private static final int ARG_NUM = 5;
+    private static final int DEFAULT_PORT = 12345;
 
     public static void main(String[] args) {
+        int portArg = DEFAULT_PORT;
+        String usersCypherPwdArg = null;
+        String keystorePathArg = null;
+        String keystorePwdArg = null;
+        String apiKeyArg = null;
 
-        int portArg = 12345;
         if (args.length == ARG_NUM) {
-           portArg = Integer.parseInt(args[0]);
-           System.out.println("IoTServer runs with port: " + portArg);
-        } else if (args.length == 0){
+            portArg = Integer.parseInt(args[0]);
+            usersCypherPwdArg = args[1];
+            keystorePathArg = args[2];
+            keystorePwdArg = args[3];
+            apiKeyArg = args[4];
+            System.out.println("IoTServer runs with port: " + portArg);
+        } else if (args.length == ARG_NUM - 1) {
+            usersCypherPwdArg = args[0];
+            keystorePathArg = args[1];
+            keystorePwdArg = args[2];
+            apiKeyArg = args[3];
             System.out.println("IoTServer runs with default port: 12345");
         } else {
-            System.err.println("IoTServer runs with at most 1 argument: a port number.");
+            System.err.println("IoTServer runs with 4-5 args. Please try again.");
             System.exit(-1);
         }
-        
-        IoTServer server = new IoTServer(portArg);
+
+        System.setProperty("javax.net.ssl.keyStore", keystorePathArg);
+        System.setProperty("javax.net.ssl.keyStorePassword", keystorePwdArg);
+
+        //TODO Add users' file password cypher to server manager
+
+        IoTServer server = new IoTServer(portArg,
+                keystorePathArg, keystorePwdArg, apiKeyArg);
+        server.startServer();
     }
 
-    public IoTServer(int port) {
+    private int port;
+    private String keystorePath;
+    private String keystorePwd;
+    private String apiKey;
+    private SSLServerSocket socket;
+
+    public IoTServer(int port, String keystorePath, String keystorePwd,
+            String apiKey) {
         this.port = port;
-        this.startServer();
+        this.keystorePath = keystorePath;
+        this.keystorePwd = keystorePwd;
+        this.apiKey = apiKey;
+        this.socket = null;
     }
 
-    private void startServer() {
-        socket = null;
+    public void startServer() {
+        ServerSocketFactory ssFactory = SSLServerSocketFactory.getDefault();
 
         try {
-            socket = new ServerSocket(port);
+            socket = (SSLServerSocket) ssFactory.createServerSocket(port);
         } catch (IOException e) {
             e.printStackTrace();
             System.exit(-1);
@@ -47,7 +77,8 @@ public class IoTServer {
         while (true) {
             try{
                 Socket connection = socket.accept();
-                ServerThread thread = new ServerThread(connection);
+                ServerThread thread = new ServerThread(connection, keystorePath,
+                        keystorePwd, apiKey);
                 thread.start();
             } catch (IOException e) {
                 e.printStackTrace();
