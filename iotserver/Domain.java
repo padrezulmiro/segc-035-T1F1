@@ -43,6 +43,14 @@ public class Domain {
         return this.name;
     }
 
+    public Set<String> getDevices(){
+        return this.devices;
+    }
+
+    public Set<String> getUsers(){
+        return this.registeredUsers;
+    }
+
     @Override
     public String toString() {
         final char NL = '\n';
@@ -59,18 +67,9 @@ public class Domain {
         sb.append(NL);
 
         for (String devFullId : devices) {
-            Device deviceObj = ServerManager.getDevice(devFullId);
-            sb.append(TAB + deviceObj.toString());
+            sb.append(TAB + devFullId + NL);
         }
 
         return sb.toString();
-    }
-
-    public Set<String> getDevices(){
-        return this.devices;
-    }
-
-    public Set<String> getUsers(){
-        return this.registeredUsers;
     }
 }

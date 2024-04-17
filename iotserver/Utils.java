@@ -1,5 +1,7 @@
 package iotserver;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 
 public class Utils {
@@ -20,5 +22,26 @@ public class Utils {
         }
 
         return blocks.toArray(new String[occurrences]);
+    }
+
+    public static String fullID(String userId, String devId){
+        return (userId + ":" + devId);
+    }
+
+    public static String userIDFromFullID(String fullDevID) {
+        return fullDevID.split(":")[0];
+    }
+
+    public static String devIDFromFullID(String fullDevID) {
+        return fullDevID.split(":")[1];
+    }
+
+    public static File initializeFile(String filename) throws IOException {
+        File fileCreated = new File(filename);
+        if (!fileCreated.exists()) {
+            fileCreated.createNewFile();
+            System.out.println("File created: " + fileCreated.getName());
+        }
+        return fileCreated;
     }
 }

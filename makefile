@@ -7,6 +7,9 @@ IoTServer \
 ServerThread \
 ServerManager \
 ServerResponse \
+DomainStorage \
+DeviceStorage \
+UserStorage \
 Utils
 
 BIN_DIR := bin
