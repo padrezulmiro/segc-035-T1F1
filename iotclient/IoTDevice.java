@@ -25,6 +25,10 @@ public class IoTDevice {
     static String userid;
     static String devid;
     static SSLSocket clientSocket = null;
+    static String serverAddress;
+    static String truststore;
+    static String keystore;
+    static String psw_keystore;
     static ObjectInputStream in;
     static ObjectOutputStream out;
 
@@ -41,10 +45,10 @@ public class IoTDevice {
                     "Error: not enough args!\nUsage: IoTDevice <serverAddress> <truststore> <keystore> <passwordkeystore> <dev-id> <user-id>\n");
             System.exit(1);
         }
-        String serverAddress = args[0];
-        String truststore = args[1];
-        String keystore = args[2];
-        String psw_keystore = args[3];
+        serverAddress = args[0];
+        truststore = args[1];
+        keystore = args[2];
+        psw_keystore = args[3];
         devid = args[4];
         userid = args[5];
 
@@ -54,12 +58,14 @@ public class IoTDevice {
         System.setProperty("javax.net.ssl.keyStore", keystore);
         System.setProperty("javax.net.ssl.keyStorePassword", psw_keystore);
         System.setProperty("javax.net.ssl.keyStoreType", "JCEKS");
-        
 
         // Connection & Authentication
         if (connect(serverAddress)) {
-            userAuth(userid, "");
-            deviceAuth(devid);
+            // userAuth(userid, "");
+            twoFactorAuth(userid);
+            // deviceAuth(devid);nesta 2ª fase, o dev-id já não é verificado durante o
+            // processo de autenticação,
+            // mas será verificado durante o processo de atestação remota (Secção 4.3).
             testDevice();
             printMenu();
             // Program doesn't end until CTRL+C is pressed
@@ -68,6 +74,42 @@ public class IoTDevice {
                 String command = sc.nextLine();
                 executeCommand(command);
             }
+        }
+    }
+
+    private static void twoFactorAuth(String user) {
+        // Autenticação baseada em criptografia assimétrica
+        try {
+            System.out.println("Starting authentication.");
+            out.writeObject(MessageCode.AU);
+            // Cliente envia user-id ao servidor pedindo para se autenticar.
+            out.writeObject(user);
+            // Receive code from server nonce aleatório de 8 bytes (por exemplo, um long)
+            long nonce = (long) in.readObject();
+
+            MessageCode code = (MessageCode) in.readObject();
+            switch (code) {
+                case OK_NEW_USER:
+                    System.out.println(MessageCode.OK_NEW_USER.getDesc());
+                    System.out.println("You've been registered.");
+                    break;
+                case OK_USER:
+                    System.out.println(MessageCode.OK_USER.getDesc());
+                    System.out.println("You've been authenticated.");
+                    break;
+                default:
+                    System.out.println("Read incorrect code from server.");
+                    break;
+            }
+            // System.exit(-1);
+            // e, caso o utilizador não esteja registado, uma flag a identificar que o
+            // utilizador é desconhecido
+        } catch (IOException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        } catch (ClassNotFoundException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
         }
     }
 
@@ -460,11 +502,9 @@ public class IoTDevice {
         // Try server connection
         System.out.println("Connecting to server.");
         try {
-            SSLSocketFactory factory =
-                (SSLSocketFactory)SSLSocketFactory.getDefault();
-            SSLSocket clientSocket =
-                (SSLSocket)factory.createSocket(addr, port);
-            //Socket clientSocket = new Socket(addr, port);
+            SSLSocketFactory factory = (SSLSocketFactory) SSLSocketFactory.getDefault();
+            SSLSocket clientSocket = (SSLSocket) factory.createSocket(addr, port);
+            // Socket clientSocket = new Socket(addr, port);
             System.out.println("Connection successful - " + addr + ":" + port);
             in = new ObjectInputStream(clientSocket.getInputStream()); // the line that prompts the closed socket
                                                                        // exceptionsocket
@@ -478,65 +518,6 @@ public class IoTDevice {
             System.exit(-1);
         }
         return false;
-    }
-
-    /**
-     * Authenticates device on the server.
-     * 
-     * @param user     User ID.
-     * @param password User's password.
-     */
-    private static void userAuth(String user, String password) {
-
-        try {
-            System.out.println("Starting authentication.");
-            out.writeObject(MessageCode.AU);
-            out.writeObject(user);
-            out.writeObject(password);
-            boolean auth = false;
-
-            // Send given user and password
-            // out.writeObject(user);
-            // out.writeObject(password);
-
-            do {
-                // Receive code from server
-                MessageCode code = (MessageCode) in.readObject();
-                switch (code) {
-                    case WRONG_PWD:
-                        System.out.println(MessageCode.WRONG_PWD.getDesc());
-                        // Wrong password. Try again.
-                        // Server waits for another password and resends a message code
-                        // Scanner sc = new Scanner(System.in);
-                        System.out.println("Password:");
-                        String newPassword = sc.nextLine();
-                        // sc.close();
-                        out.writeObject(MessageCode.AU);
-                        out.writeObject(newPassword);
-                        break;
-                    case OK_NEW_USER:
-                        System.out.println(MessageCode.OK_NEW_USER.getDesc());
-                        System.out.println("You've been registered.");
-                        auth = true;
-                        break;
-                    case OK_USER:
-                        System.out.println(MessageCode.OK_USER.getDesc());
-                        System.out.println("You've been authenticated.");
-                        auth = true;
-                        break;
-                    default:
-                        System.out.println("Read incorrect code from server.");
-                        break;
-                }
-            } while (!auth);
-
-        } catch (IOException e) {
-            System.err.println("ERROR" + e.getMessage());
-            System.exit(-1);
-        } catch (ClassNotFoundException e) {
-            e.printStackTrace();
-            System.exit(-1);
-        }
     }
 
     /**
