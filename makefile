@@ -10,7 +10,6 @@ ServerResponse \
 DomainStorage \
 DeviceStorage \
 UserStorage \
-Utils
 
 BIN_DIR := bin
 DEVICE_DIR := iotclient
@@ -22,9 +21,9 @@ SERVER_FULL_PATHS := $(addsuffix .java,$(addprefix $(SERVER_DIR)/,$(SERVER_SRC))
 all:
 	javac -d bin $(DEVICE_FULL_PATHS) $(SERVER_FULL_PATHS)
 	jar cvfe IoTDevice.jar iotclient.IoTDevice -C ./bin $(DEVICE_DIR) \
--C ./bin iohelper/FileHelper.class
+-C ./bin iohelper/FileHelper.class -C ./bin iohelper/Utils.class
 	jar cvfe IoTServer.jar iotserver.IoTServer -C ./bin $(SERVER_DIR) \
--C ./bin iotclient/MessageCode.class -C ./bin iohelper/FileHelper.class
+-C ./bin iotclient/MessageCode.class -C ./bin iohelper/FileHelper.class -C ./bin iohelper/Utils.class
 	chmod +x ./attestation.sh
 	./attestation.sh
 clean:
