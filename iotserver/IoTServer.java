@@ -1,7 +1,6 @@
 package iotserver;
 
 import java.io.IOException;
-import java.net.ServerSocket;
 import java.net.Socket;
 import javax.net.ServerSocketFactory;
 import javax.net.ssl.SSLServerSocket;
@@ -41,6 +40,7 @@ public class IoTServer {
 
         System.setProperty("javax.net.ssl.keyStore", keystorePathArg);
         System.setProperty("javax.net.ssl.keyStorePassword", keystorePwdArg);
+        System.setProperty("javax.net.ssl.keyStoreType", "JCEKS");
 
         //TODO Add users' file password cypher to server manager
 
