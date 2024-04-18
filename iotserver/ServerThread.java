@@ -19,7 +19,8 @@ public class ServerThread extends Thread {
     private String deviceID;
     private boolean isRunning;
 
-    public ServerThread(Socket socket) {
+    public ServerThread(Socket socket, String keystorePath, String keystorePwd,
+            String apiKey) {
         this.socket = socket;
         this.userID = null;
         this.deviceID = null;

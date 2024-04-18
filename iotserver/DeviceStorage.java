@@ -129,12 +129,13 @@ public class DeviceStorage {
             String[] tokens = Utils.split(lines[i], SP);
             String uid = tokens[0];
             String did = tokens[1];
-            float temperature = Float.parseFloat(tokens[2]);
-            String imagePath = tokens[3];
+            Float temperature = null;
+            if(!tokens[2].equals("")){temperature = Float.parseFloat(tokens[2]);}
+            String imagePath = tokens[3];;
 
             Device device = new Device(uid, did);
-            device.registerTemperature(temperature);
-            device.registerImage(imagePath);
+            if(temperature != null){device.registerTemperature(temperature);}
+            if(imagePath!=null) device.registerImage(imagePath);
 
             devices.put(Utils.fullID(uid, did), device);
         }

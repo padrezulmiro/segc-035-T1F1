@@ -7,11 +7,12 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Scanner;
+import javax.net.ssl.SSLSocket;
+import javax.net.ssl.SSLSocketFactory;
 
 /**
  * Um cliente IoT é um programa – chamemos-lhe IoTDevice – que representa um
@@ -21,8 +22,7 @@ public class IoTDevice {
     private static final int DEFAULT_PORT = 12345;
     static String userid;
     static String devid;
-    static String password;
-    static Socket clientSocket = null;
+    static SSLSocket clientSocket = null;
     static ObjectInputStream in;
     static ObjectOutputStream out;
 
@@ -34,22 +34,29 @@ public class IoTDevice {
         addCliShutdownHook();
         sc = new Scanner(System.in);
         // Check arguments
-        if (args.length < 3) {
+        if (args.length < 6) {
             System.out.println(
-                    "Error: not enough args!\nUsage: IoTDevice <serverAddress> <dev-id> <user-id>\n");
+                    "Error: not enough args!\nUsage: IoTDevice <serverAddress> <truststore> <keystore> <passwordkeystore> <dev-id> <user-id>\n");//<serverAddress> <dev-id> <user-id>\n");
             System.exit(1);
         }
         String serverAddress = args[0];
-        devid = args[1];
-        userid = args[2];
+        String truststore = args[1];
+        String keystore = args[2];
+        String psw_keystore = args[3];
+        devid = args[4];
+        userid = args[5];
 
-        // Ask for pswd
-        System.out.println("Password for " + userid + ":");
-        password = sc.nextLine();
+        System.setProperty("javax.net.ssl.trustStore", truststore);
+        System.setProperty("javax.net.ssl.trustStorePassword", psw_keystore);
+        System.setProperty("javax.net.ssl.trustStoreType", "JCEKS");
+        System.setProperty("javax.net.ssl.keyStore", keystore);
+        System.setProperty("javax.net.ssl.keyStorePassword", psw_keystore);
+        System.setProperty("javax.net.ssl.keyStoreType", "JCEKS");
+        
 
         // Connection & Authentication
         if (connect(serverAddress)) {
-            userAuth(userid, password);
+            userAuth(userid, "");
             deviceAuth(devid);
             testDevice();
             printMenu();
@@ -451,7 +458,11 @@ public class IoTDevice {
         // Try server connection
         System.out.println("Connecting to server.");
         try {
-            Socket clientSocket = new Socket(addr, port);
+            SSLSocketFactory factory =
+                (SSLSocketFactory)SSLSocketFactory.getDefault();
+            SSLSocket clientSocket =
+                (SSLSocket)factory.createSocket(addr, port);
+            //Socket clientSocket = new Socket(addr, port);
             System.out.println("Connection successful - " + addr + ":" + port);
             in = new ObjectInputStream(clientSocket.getInputStream()); // the line that prompts the closed socket
                                                                        // exceptionsocket

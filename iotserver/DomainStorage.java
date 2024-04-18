@@ -79,7 +79,6 @@ public class DomainStorage {
                 devStorage.getDeviceTemperature(userID, devID);
             temperatures.put(fullDevID, devTemperature);
         }
-
         return temperatures;
     }
 
