@@ -20,6 +20,8 @@ import javax.net.ssl.SSLSocketFactory;
  */
 public class IoTDevice {
     private static final int DEFAULT_PORT = 12345;
+    private static final int ARG_NUM = 6;
+
     static String userid;
     static String devid;
     static SSLSocket clientSocket = null;
@@ -34,9 +36,9 @@ public class IoTDevice {
         addCliShutdownHook();
         sc = new Scanner(System.in);
         // Check arguments
-        if (args.length < 6) {
+        if (args.length < ARG_NUM) {
             System.out.println(
-                    "Error: not enough args!\nUsage: IoTDevice <serverAddress> <truststore> <keystore> <passwordkeystore> <dev-id> <user-id>\n");//<serverAddress> <dev-id> <user-id>\n");
+                    "Error: not enough args!\nUsage: IoTDevice <serverAddress> <truststore> <keystore> <passwordkeystore> <dev-id> <user-id>\n");
             System.exit(1);
         }
         String serverAddress = args[0];
