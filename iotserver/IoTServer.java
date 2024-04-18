@@ -34,7 +34,7 @@ public class IoTServer {
             apiKeyArg = args[3];
             System.out.println("IoTServer runs with default port: 12345");
         } else {
-            System.err.println("IoTServer runs with 4-5 args. Please try again.");
+            System.err.println("Usage: IoTServer <port> <password-cifra> <keystore> <password-keystore> <2FA-APIKey>\n Please try again.");
             System.exit(-1);
         }
 
