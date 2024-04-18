@@ -1,5 +1,6 @@
 package iotclient;
 
+import iohelper.CipherHelper;
 import iohelper.FileHelper;
 import java.io.BufferedWriter;
 import java.io.File;
@@ -8,9 +9,22 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.UnknownHostException;
+import java.security.InvalidKeyException;
+import java.security.KeyStore;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
+import java.security.PublicKey;
+import java.security.cert.Certificate;
+import java.security.cert.CertificateException;
+import java.security.spec.InvalidKeySpecException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Scanner;
+
+import javax.crypto.BadPaddingException;
+import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.NoSuchPaddingException;
+import javax.crypto.SecretKey;
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
 
@@ -25,7 +39,11 @@ public class IoTDevice {
     static SSLSocket clientSocket = null;
     static ObjectInputStream in;
     static ObjectOutputStream out;
+    static KeyStore trustStore;
+    static KeyStore keyStore;
+    static int iterationRounds;
 
+    private static final String domkeyParamPath = "./domkey/";
     private static final String deviceJar = "IoTDevice.jar";
 
     private static Scanner sc;
@@ -43,8 +61,6 @@ public class IoTDevice {
         String truststore = args[1];
         String keystore = args[2];
         String psw_keystore = args[3];
-        devid = args[4];
-        userid = args[5];
 
         System.setProperty("javax.net.ssl.trustStore", truststore);
         System.setProperty("javax.net.ssl.trustStorePassword", psw_keystore);
@@ -53,6 +69,16 @@ public class IoTDevice {
         System.setProperty("javax.net.ssl.keyStorePassword", psw_keystore);
         System.setProperty("javax.net.ssl.keyStoreType", "JCEKS");
         
+        try {
+            trustStore = CipherHelper.getKeyStore(truststore, "");
+            keyStore = CipherHelper.getKeyStore(keystore, psw_keystore);
+        } catch (NoSuchAlgorithmException | CertificateException | KeyStoreException | IOException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        } //TODO: get rid of trustStore password
+        
+        devid = args[4];
+        userid = args[5];
 
         // Connection & Authentication
         if (connect(serverAddress)) {
@@ -106,10 +132,10 @@ public class IoTDevice {
                 break;
             case "A":
             case "ADD":
-                if (cmds.length != 3) {
-                    System.out.println("Error: incorrect args\nUsage: ADD <user1> <dm>");
+                if (cmds.length != 4) {
+                    System.out.println("Error: incorrect args\nUsage: ADD <user1> <dm> <dm-pwd>");
                 } else {
-                    addUser(cmds[1], cmds[2]);
+                    addUser(cmds[1], cmds[2], cmds[3]);
                 }
                 break;
             case "RD":
@@ -218,10 +244,8 @@ public class IoTDevice {
                     // essentially ClassCastException will be thrown if any of the maps is bad
 
                     // TODO: write it to file
-                    String fileName = "temps_" + domain + ".txt";
-                    File f = new File(fileName);
-                    f.createNewFile();
-                    BufferedWriter output = new BufferedWriter(new FileWriter(f));
+                    File f = new File(("temps_" + domain + ".txt"));
+                    BufferedWriter output = FileHelper.createFileWriter(f);
                     for (Map.Entry<String, Float> entry : temps.entrySet()) {
                         output.write(entry.getKey() + ":" + entry.getValue() + System.getProperty("line.separator"));
                         output.flush();
@@ -329,11 +353,24 @@ public class IoTDevice {
      * @param user
      * @param domain
      */
-    private static void addUser(String user, String domain) {
+    private static void addUser(String user, String domain, String domPwd) {
         try {
+
+            // get user's cert
+            Certificate newUserCert = trustStore.getCertificate(user);
+            // get user's pk
+            PublicKey pk = newUserCert.getPublicKey();
+            // generate domkey with dompwd
+            String domkeyLocation = domkeyParamPath + domain;
+            SecretKey skey = CipherHelper.getKeyFromPwd(domPwd,domkeyLocation);
+            // encrypt domkey with pk of the new user
+            byte[] enDomkey = CipherHelper.encrypt("PBEWithHmacSHA256AndAES_128", pk, skey.getEncoded());
+
+
             out.writeObject(MessageCode.ADD); // Send opcode
             out.writeObject(user); // Send user
             out.writeObject(domain); // Send domain
+            out.writeObject(enDomkey); // SendDomKey to server
             // Receive message
             MessageCode code = (MessageCode) in.readObject();
             switch (code) {
@@ -355,6 +392,25 @@ public class IoTDevice {
                     break;
             }
         } catch (IOException | ClassNotFoundException e) {
+            // TODO Auto-generated catch block
+        } catch (KeyStoreException e){
+            e.printStackTrace();
+        } catch (NoSuchAlgorithmException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        } catch (InvalidKeySpecException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        } catch (InvalidKeyException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        } catch (NoSuchPaddingException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        } catch (IllegalBlockSizeException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        } catch (BadPaddingException e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
         }

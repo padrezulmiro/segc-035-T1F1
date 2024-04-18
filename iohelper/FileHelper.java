@@ -2,14 +2,19 @@ package iohelper;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.OutputStream;
+import java.util.Map;
 
 public class FileHelper {
     // private ObjectOutputStream out;
@@ -85,5 +90,19 @@ public class FileHelper {
             e.printStackTrace();
         }
     }
-    
+
+    /*
+     * Given a file, it will just write on in there baby
+     */
+    public static BufferedWriter createFileWriter(File f) throws IOException{
+        f.createNewFile();
+        BufferedWriter bw = new BufferedWriter(new FileWriter(f));
+        return bw;
+    }    
+
+    public static BufferedReader createFileReader(File f) throws IOException{
+        f.createNewFile();
+        BufferedReader br = new BufferedReader(new FileReader(f));
+        return br;
+    }
 }
