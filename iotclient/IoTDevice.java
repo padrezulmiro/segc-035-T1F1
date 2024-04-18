@@ -47,6 +47,7 @@ public class IoTDevice {
         userid = args[5];
 
         System.setProperty("javax.net.ssl.trustStore", truststore);
+        System.setProperty("javax.net.ssl.trustStorePassword", psw_keystore);
         System.setProperty("javax.net.ssl.trustStoreType", "JCEKS");
         System.setProperty("javax.net.ssl.keyStore", keystore);
         System.setProperty("javax.net.ssl.keyStorePassword", psw_keystore);
@@ -55,9 +56,9 @@ public class IoTDevice {
 
         // Connection & Authentication
         if (connect(serverAddress)) {
-            //userAuth(userid, password);
-            //deviceAuth(devid);
-            //testDevice();
+            userAuth(userid, "");
+            deviceAuth(devid);
+            testDevice();
             printMenu();
             // Program doesn't end until CTRL+C is pressed
             while (true) {// Steps 8 - 10
