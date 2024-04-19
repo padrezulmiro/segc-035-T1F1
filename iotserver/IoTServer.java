@@ -9,6 +9,7 @@ import javax.net.ssl.SSLServerSocketFactory;
 public class IoTServer {
     public static final ServerManager SERVER_MANAGER = ServerManager
         .getInstance();
+    public static final ServerAuth SERVER_AUTH = ServerAuth.getInstance();
 
     private static final int ARG_NUM = 5;
     private static final int DEFAULT_PORT = 12345;

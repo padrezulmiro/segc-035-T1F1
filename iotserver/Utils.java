@@ -44,4 +44,8 @@ public class Utils {
         }
         return fileCreated;
     }
+
+    public static String certPathFromUser(String user) {
+        return "scerts/" + user + ".cert";
+    }
 }

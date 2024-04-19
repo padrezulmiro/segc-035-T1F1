@@ -4,6 +4,11 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
+import java.security.SignatureException;
+import java.security.cert.Certificate;
+import java.security.cert.CertificateException;
 
 import iotclient.MessageCode;
 import iohelper.FileHelper;
@@ -91,8 +96,43 @@ public class ServerThread extends Thread {
         if (this.userID==null){
             this.userID = (String) in.readObject();
         }
+
         String pwd = (String) in.readObject();
         out.writeObject(manager.authenticateUser(userID).responseCode());
+    }
+
+    //XXX Replace this with authUser()
+    private void authUserNew() throws ClassNotFoundException, IOException,
+            InvalidKeyException, CertificateException, NoSuchAlgorithmException,
+            SignatureException {
+        ServerAuth sa = IoTServer.SERVER_AUTH;
+        userID = (String) in.readObject();
+
+        long nonce = sa.generateNonce();
+        out.writeLong(nonce);
+
+        if (sa.isUserRegistered(userID)) {
+            out.writeObject(MessageCode.OK_USER);
+
+            byte[] signedNonce = (byte[]) in.readObject();
+            if (sa.verifySignedNonce(signedNonce, userID, nonce)) {
+                out.writeObject(MessageCode.OK);
+            } else {
+                //FIXME Create a new message code type
+                out.writeObject(MessageCode.WRONG_PWD);
+            }
+        } else {
+            out.writeObject(MessageCode.OK_NEW_USER);
+
+            long receivedUnsignedNonce = in.readLong();
+            byte[] signedNonce = (byte[]) in.readObject();
+            Certificate cert = (Certificate) in.readObject();
+
+            if (sa.verifySignedNonce(signedNonce, userID, nonce) &&
+                    receivedUnsignedNonce == nonce) {
+
+            }
+        }
     }
 
     private void authDevice() throws IOException, ClassNotFoundException {
