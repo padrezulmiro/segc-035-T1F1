@@ -9,7 +9,7 @@ import iotclient.MessageCode;
 import iohelper.FileHelper;
 
 public class ServerThread extends Thread {
-    private static final String IMAGE_DIR_PATH = "./img/";
+    private static final String IMAGE_DIR_PATH = "./output/server/img/";
 
     private Socket socket;
     private ObjectOutputStream out;

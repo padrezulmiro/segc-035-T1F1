@@ -17,12 +17,13 @@ public class ServerManager {
     private UserStorage userStorage;
     private Long clientFileSize;
 
+    private static final String baseDir = "./output/server/";
     private static final String attestationFilePath = "attestation.txt";
-    private static final String domainFilePath = "domain.txt";
-    private static final String deviceFilePath = "device.txt";
-    private static final String userFilePath = "user.txt";
-    private static final String imageDirectoryPath = "./img/";
-    private static final String temperatureDirectoryPath = "./temp/";
+    private static final String domainFilePath = baseDir + "domain.txt";
+    private static final String deviceFilePath = baseDir + "device.txt";
+    private static final String userFilePath = baseDir + "user.txt";
+    private static final String imageDirectoryPath = baseDir + "img/";
+    private static final String temperatureDirectoryPath = baseDir + "temp/";
     private static final String clientFileName = "IoTDevice.jar";
 
     private ServerManager(){
