@@ -99,11 +99,11 @@ public class CipherHelper {
     //PBEWithHmacSHA256AndAES_128
     // TODO: figure out what type of data will be en/decrypted
     // Be mindful of buffering when using 
-    public static byte[] encrypt(String algorithm,PublicKey key, byte[] input) 
+    public static byte[] encrypt(String algorithm, PublicKey key, byte[] input) 
                 throws NoSuchAlgorithmException, NoSuchPaddingException,
                        InvalidKeyException, IllegalBlockSizeException, BadPaddingException{
         Cipher c = Cipher.getInstance(algorithm);
-        c.init(Cipher.ENCRYPT_MODE, key);
+        c.init(Cipher.ENCRYPT_MODE, key); // this line is fucked
         byte[] cipherData = c.doFinal(input);
         return cipherData;
     }
@@ -132,7 +132,8 @@ public class CipherHelper {
                                         IOException,  KeyStoreException{
         FileInputStream kfile = new FileInputStream(keystorePath); 
         KeyStore kstore = KeyStore.getInstance("JCEKS");
-        kstore.load(kfile, keystorePwd.toCharArray());
+        kstore.load(kfile, keystorePwd.toCharArray()); //this. is wrong?
+        kfile.close();
         return kstore;
     }
 

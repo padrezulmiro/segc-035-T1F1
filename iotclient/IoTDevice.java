@@ -44,7 +44,8 @@ public class IoTDevice {
     static KeyStore keyStore;
     static int iterationRounds;
 
-    private static final String domkeyParamPath = "./domkey/";
+    private static String baseDir; // defined after userid is given
+    private static String domkeyParamPath;
     private static final String deviceJar = "IoTDevice.jar";
 
     private static Scanner sc;
@@ -71,15 +72,19 @@ public class IoTDevice {
         System.setProperty("javax.net.ssl.keyStoreType", "JCEKS");
         
         try {
-            trustStore = CipherHelper.getKeyStore(truststore, "");
+            trustStore = CipherHelper.getKeyStore(truststore, "iotclient");
             keyStore = CipherHelper.getKeyStore(keystore, psw_keystore);
         } catch (NoSuchAlgorithmException | CertificateException | KeyStoreException | IOException e) {
             // TODO Auto-generated catch block
+            System.out.println("test. caught: ");
             e.printStackTrace();
         } //TODO: get rid of trustStore password
         
         devid = args[4];
         userid = args[5];
+        baseDir = "./output/" + userid + "/"; 
+        domkeyParamPath = baseDir + "domkey/";
+        new File(domkeyParamPath).mkdirs();
 
         // Connection & Authentication
         if (connect(serverAddress)) {
@@ -358,7 +363,7 @@ public class IoTDevice {
         try {
 
             // get user's cert
-            Certificate newUserCert = trustStore.getCertificate(user);
+            Certificate newUserCert = trustStore.getCertificate(user); // sth here is fucked up
             // get user's pk
             PublicKey pk = newUserCert.getPublicKey();
             // generate domkey with dompwd
@@ -366,7 +371,7 @@ public class IoTDevice {
             SecretKey skey = CipherHelper.getKeyFromPwd(domPwd,domkeyLocation);
             // encrypt domkey with pk of the new user
             String enDomkey = Base64.getEncoder().
-                    encodeToString(CipherHelper.encrypt("PBEWithHmacSHA256AndAES_128",
+                    encodeToString(CipherHelper.encrypt("RSA",
                                                                     pk, skey.getEncoded()));
 
             out.writeObject(MessageCode.ADD); // Send opcode
@@ -395,6 +400,7 @@ public class IoTDevice {
             }
         } catch (IOException | ClassNotFoundException e) {
             // TODO Auto-generated catch block
+            e.printStackTrace();
         } catch (KeyStoreException e){
             e.printStackTrace();
         } catch (NoSuchAlgorithmException e) {

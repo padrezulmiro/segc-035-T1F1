@@ -30,3 +30,6 @@ domain.txt
 user.txt
 .vscode
 *.txt
+output/user1/
+output/user2/
+output/user3/
