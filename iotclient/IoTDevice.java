@@ -3,11 +3,25 @@ package iotclient;
 import iohelper.FileHelper;
 import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.UnknownHostException;
+import java.nio.ByteBuffer;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.security.InvalidKeyException;
+import java.security.KeyStore;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
+import java.security.PrivateKey;
+import java.security.Signature;
+import java.security.SignatureException;
+import java.security.UnrecoverableKeyException;
+import java.security.cert.Certificate;
+import java.security.cert.CertificateException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Scanner;
@@ -82,32 +96,57 @@ public class IoTDevice {
         try {
             System.out.println("Starting authentication.");
             out.writeObject(MessageCode.AU);
-            // Cliente envia user-id ao servidor pedindo para se autenticar.
+            // Send user id
             out.writeObject(user);
-            // Receive code from server nonce aleatório de 8 bytes (por exemplo, um long)
+            // Receive nonce from server
             long nonce = (long) in.readObject();
-
+            // MessageCode used as flag
             MessageCode code = (MessageCode) in.readObject();
             switch (code) {
                 case OK_NEW_USER:
                     System.out.println(MessageCode.OK_NEW_USER.getDesc());
-                    System.out.println("You've been registered.");
+                    // Send nonce
+                    out.writeObject(nonce);
+                    // Send nonce signed with private key
+                    FileInputStream kfile = new FileInputStream(keystore);
+                    KeyStore kstore = KeyStore.getInstance("JCEKS");
+                    kstore.load(kfile, psw_keystore.toCharArray());
+                    PrivateKey privKey = (PrivateKey) kstore.getKey(user, psw_keystore.toCharArray());
+
+                    Signature signature = Signature.getInstance("MD5withRSA");
+                    signature.initSign(privKey);
+                    byte[] nonceBytes = ByteBuffer.allocate(8).putLong(nonce).array(); // TODO: check this
+                    signature.update(nonceBytes);
+                    byte[] signedNonce = signature.sign();
+                    out.writeObject(signedNonce);
+
+                    // Send certificate with public key
+                    Certificate cert = kstore.getCertificate(user);
+
                     break;
                 case OK_USER:
                     System.out.println(MessageCode.OK_USER.getDesc());
-                    System.out.println("You've been authenticated.");
+                    // Send nonce signed with private key
                     break;
                 default:
                     System.out.println("Read incorrect code from server.");
+                    System.exit(-1);
                     break;
             }
-            // System.exit(-1);
-            // e, caso o utilizador não esteja registado, uma flag a identificar que o
-            // utilizador é desconhecido
-        } catch (IOException e) {
+
+        } catch (IOException | ClassNotFoundException | NoSuchAlgorithmException | InvalidKeyException e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
-        } catch (ClassNotFoundException e) {
+        } catch (KeyStoreException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        } catch (CertificateException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        } catch (UnrecoverableKeyException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        } catch (SignatureException e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
         }
