@@ -17,7 +17,7 @@ public class ServerManager {
     private Long clientFileSize;
 
     private static final String baseDir = "./output/server/";
-    private static final String attestationFilePath = baseDir + "attestation.txt";
+    private static final String attestationFilePath = "attestation.txt";
     private static final String domainFilePath = baseDir + "domain.txt";
     private static final String deviceFilePath = baseDir + "device.txt";
     private static final String userFilePath = baseDir + "user.txt";
