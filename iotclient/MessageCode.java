@@ -6,7 +6,7 @@ package iotclient;
 public enum MessageCode {
     WRONG_PWD("WRONG_PWD # Wrong password. Try again."),
     OK_NEW_USER("OK_NEW_USER # This user isn't registered."),
-    OK_USER("OK_USER # User exists and pswd is correct."),
+    OK_USER("OK_USER # User exists."),
     NOK_DEVID("NOK_DEVID # This device ID is already connected with this user. Try another <dev-id>."),
     OK_DEVID("OK_DEVID # User and device ok."),
     NOK_TESTED("NOK_TESTED # Server did not validate."),
