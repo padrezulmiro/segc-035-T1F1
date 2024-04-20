@@ -79,7 +79,7 @@ public class ServerManager {
     }
 
     public ServerResponse addUserToDomain(String requesterUID, String newUserID,
-            String domainName) {
+            String domainName, String enDomkey) {
         domStorage.writeLock();
         userStorage.readLock();
         try {
@@ -96,7 +96,7 @@ public class ServerManager {
             }
 
             boolean ret = domStorage
-                .addUserToDomain(requesterUID, newUserID, domainName);
+                .addUserToDomain(requesterUID, newUserID, domainName, enDomkey);
             if (ret) {
                 return new ServerResponse(MessageCode.OK);
             } else {

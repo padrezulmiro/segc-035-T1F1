@@ -48,9 +48,9 @@ public class DomainStorage {
     }
 
     public boolean addUserToDomain(String requesterUID, String newUserID,
-            String domainName) {
+            String domainName, String enDomkey) {
         Domain domain = domains.get(domainName);
-        boolean ret = domain.registerUser(newUserID);
+        boolean ret = domain.registerUser(newUserID, enDomkey);
         if (ret) updateDomainsFile();
         return ret;
     }
@@ -177,11 +177,12 @@ public class DomainStorage {
     private void initDomainFromLine(String[] tokens) {
         String domainName = tokens[0];
         String owner = tokens[1];
+        String enDomkey = tokens[2];
 
         Domain domain = new Domain(domainName, owner);
         for (int j = 2; j < tokens.length; j++) {
             String user = tokens[j];
-            domain.registerUser(user);
+            domain.registerUser(user,enDomkey);
         }
 
         domains.put(domainName, domain);

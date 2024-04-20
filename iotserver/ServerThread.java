@@ -151,7 +151,8 @@ public class ServerThread extends Thread {
     private void addUserToDomain() throws IOException, ClassNotFoundException {
         String newUser = (String)in.readObject();
         String domain = (String)in.readObject();
-        MessageCode res = manager.addUserToDomain(userID, newUser, domain).responseCode();
+        String enDomkey = (String)in.readObject();
+        MessageCode res = manager.addUserToDomain(userID, newUser, domain, enDomkey).responseCode();
         out.writeObject(res);
     }
 

@@ -17,6 +17,7 @@ import java.security.PublicKey;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
 import java.security.spec.InvalidKeySpecException;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Scanner;
@@ -364,8 +365,9 @@ public class IoTDevice {
             String domkeyLocation = domkeyParamPath + domain;
             SecretKey skey = CipherHelper.getKeyFromPwd(domPwd,domkeyLocation);
             // encrypt domkey with pk of the new user
-            byte[] enDomkey = CipherHelper.encrypt("PBEWithHmacSHA256AndAES_128", pk, skey.getEncoded());
-
+            String enDomkey = Base64.getEncoder().
+                    encodeToString(CipherHelper.encrypt("PBEWithHmacSHA256AndAES_128",
+                                                                    pk, skey.getEncoded()));
 
             out.writeObject(MessageCode.ADD); // Send opcode
             out.writeObject(user); // Send user
@@ -487,7 +489,7 @@ public class IoTDevice {
         System.out.println("\n");
         System.out.println("******** IoTDevice ********");
         System.out.println("CREATE <dm> # Criar domínio - utilizador é Owner");
-        System.out.println("ADD <user1> <dm> # Adicionar utilizador <user1> ao domínio <dm>");
+        System.out.println("ADD <user1> <dm> <dm-pwd> # Adicionar utilizador <user1> ao domínio <dm>");
         System.out.println("RD <dm> # Registar o Dispositivo atual no domínio <dm>");
         System.out.println("ET <float> # Enviar valor <float> de Temperatura para o servidor.");
         System.out.println("EI <filename.jpg> # Enviar Imagem <filename.jpg> para o servidor.");
