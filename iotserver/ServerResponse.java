@@ -4,17 +4,20 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.InputStream;
+import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
 
 import iotclient.MessageCode;
 
-public class ServerResponse  {
+public class ServerResponse implements Serializable{
     private MessageCode code;
     private long fileSize;
-    private InputStream fileStream;
+    private transient InputStream fileStream;
     private String filePath;
     private Map<String,Float> temperatures;
+    private String encryptedDomainKey;
+    
     public ServerResponse(MessageCode code) {
         this.code = code;
         this.fileSize = -1;
@@ -22,9 +25,10 @@ public class ServerResponse  {
         this.temperatures = null;
     }
 
-    public ServerResponse(MessageCode code, String filePath) {
+    public ServerResponse(MessageCode code, String filePath, String enDomkey) {
         this.code = code;
         this.filePath= filePath;
+        this.encryptedDomainKey = enDomkey;
         File file = new File(filePath);
         this.fileSize = file.length();
         try {
@@ -34,9 +38,10 @@ public class ServerResponse  {
         }
     }
 
-    public ServerResponse(MessageCode code, Map<String,Float> temps){
+    public ServerResponse(MessageCode code, Map<String,Float> temps, String enDomkey){
         this.code = code;
         this.temperatures = temps;
+        this.encryptedDomainKey = enDomkey;
     }
 
     public MessageCode responseCode() {
@@ -57,6 +62,10 @@ public class ServerResponse  {
 
     public Map<String,Float> temperatures(){
         return temperatures;
+    }
+
+    public String encryptedDomainKey(){
+        return encryptedDomainKey;
     }
 
 }

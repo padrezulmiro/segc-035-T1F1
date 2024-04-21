@@ -63,6 +63,11 @@ public class DomainStorage {
         return ret;
     }
 
+    public String getDeviceEncryptedDomainKey(String domainName, String userID){
+        Domain domain = domains.get(domainName);
+        return domain.getDeviceEncryptedDomainKey(userID);
+    }
+
     public Map<String, Float> temperatures(String domainName,
             DeviceStorage devStorage) {
         //FIXME A better implementation doesn't need access to devStorage
@@ -118,19 +123,15 @@ public class DomainStorage {
         wLock.unlock();
     }
 
-    public boolean hasAccessToDevice(String user, String devUID, String devDID) {
-        boolean hasAccess = false;
+    public String hasAccessToDeviceIn(String user, String devUID, String devDID) {
         String fullID = Utils.fullID(devUID, devDID);
-
         for (Domain domain : domains.values()) {
             if (!domain.isDeviceRegistered(fullID)) continue;
             if (domain.isRegistered(user)) {
-                hasAccess = true;
-                break;
+                return domain.getName();
             }
         }
-
-        return user.equals(devUID) || hasAccess;
+        return null;
     }
 
     private void updateDomainsFile(){

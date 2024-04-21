@@ -62,6 +62,10 @@ public class Domain {
         enDomkeyMap.put(user, enDomkey);
     }
 
+    public String getDeviceEncryptedDomainKey(String user){
+        return enDomkeyMap.get(user);
+    }
+
     @Override
     public String toString() {
         final char NL = '\n';

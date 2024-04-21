@@ -90,12 +90,13 @@ public class ServerThread extends Thread {
     private void getImage() throws IOException, ClassNotFoundException {
         String targetUser = (String)in.readObject();
         String targetDev = (String)in.readObject();
-        ServerResponse sr = manager.getImage(this.userID,targetUser, targetDev);
+        ServerResponse sr = manager.getImage(this.userID,targetUser,targetDev);
         MessageCode rCode=sr.responseCode();
         // Send code to client
         out.writeObject(rCode);
         // Send file (if aplicable)
         if( rCode == MessageCode.OK){
+            out.writeObject(sr.encryptedDomainKey());
             FileHelper.sendFile(sr.filePath(), out);
         }
     }
@@ -107,7 +108,7 @@ public class ServerThread extends Thread {
         out.writeObject(res);
         if(res==MessageCode.OK){
             // FileHelper.sendFile(sResponse.filePath(),out);
-            out.writeObject(sResponse.temperatures());
+            out.writeObject(sResponse); 
         }
     }
 

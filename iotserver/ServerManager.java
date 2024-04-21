@@ -175,9 +175,9 @@ public class ServerManager {
 
             Map<String, Float> temps = domStorage.temperatures(domainName,
                     devStorage);
-
+            String enDomkey = domStorage.getDeviceEncryptedDomainKey(domainName, user);
             //XXX ServerResponse is being init with a Map?
-            return new ServerResponse(MessageCode.OK, temps);
+            return new ServerResponse(MessageCode.OK, temps, enDomkey);
         } finally {
             devStorage.readUnlock();
             domStorage.readUnlock();
@@ -198,9 +198,10 @@ public class ServerManager {
                 return new ServerResponse(MessageCode.NODATA);
             }
 
-            if (domStorage.hasAccessToDevice(requesterUID, targetUID,
-                    targetDID)) {
-                return new ServerResponse(MessageCode.OK, filepath);
+            String domainName = domStorage.hasAccessToDeviceIn(requesterUID, targetUID, targetDID);
+            if (domainName!=null) {
+                String enDomkey = domStorage.getDeviceEncryptedDomainKey(domainName, requesterUID);
+                return new ServerResponse(MessageCode.OK, filepath, enDomkey);
             }
 
             return new ServerResponse(MessageCode.NOPERM);

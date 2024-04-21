@@ -81,7 +81,6 @@ public class FileHelper {
                 output.flush();
                 fout.flush();
                 bytesWritten += bytesRead;
-                System.out.println(bytesWritten);
             }
             output.close();
             fout.close();

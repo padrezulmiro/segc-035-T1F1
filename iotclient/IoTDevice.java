@@ -2,6 +2,8 @@ package iotclient;
 
 import iohelper.CipherHelper;
 import iohelper.FileHelper;
+import iotserver.ServerResponse;
+
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
@@ -202,6 +204,7 @@ public class IoTDevice {
             MessageCode code = (MessageCode) in.readObject();
             switch (code) {
                 case OK:
+                    String enDomkey = (String) in.readObject();
                     String s = (String) in.readObject(); // This is discarded
                     long fileSize = (long) in.readObject(); // Read file size
                     System.out.println("FIle size:" + fileSize);
@@ -238,7 +241,9 @@ public class IoTDevice {
                 case OK:
                     // Long fileSize = (long) in.readObject(); // Read file size
                     @SuppressWarnings("unchecked")
-                    HashMap<String, Float> temps = (HashMap<String, Float>) in.readObject();
+                    ServerResponse sResponse = (ServerResponse) in.readObject();
+                    String enDomkey = sResponse.encryptedDomainKey();
+                    HashMap<String, Float> temps = (HashMap<String, Float>) sResponse.temperatures();
                     for (@SuppressWarnings("unused")
                     String s : temps.keySet())
                         ;
