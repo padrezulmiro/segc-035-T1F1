@@ -100,6 +100,12 @@ public class IoTDevice {
             out.writeObject(user);
             // Receive nonce from server
             long nonce = (long) in.readObject();
+
+            FileInputStream kfile = new FileInputStream(keystore);
+            KeyStore kstore = KeyStore.getInstance("JCEKS");
+            kstore.load(kfile, psw_keystore.toCharArray());
+            PrivateKey privKey = (PrivateKey) kstore.getKey(user, psw_keystore.toCharArray());
+
             // MessageCode used as flag
             MessageCode code = (MessageCode) in.readObject();
             switch (code) {
@@ -108,25 +114,28 @@ public class IoTDevice {
                     // Send nonce
                     out.writeObject(nonce);
                     // Send nonce signed with private key
-                    FileInputStream kfile = new FileInputStream(keystore);
-                    KeyStore kstore = KeyStore.getInstance("JCEKS");
-                    kstore.load(kfile, psw_keystore.toCharArray());
-                    PrivateKey privKey = (PrivateKey) kstore.getKey(user, psw_keystore.toCharArray());
-
-                    Signature signature = Signature.getInstance("MD5withRSA");
-                    signature.initSign(privKey);
-                    byte[] nonceBytes = ByteBuffer.allocate(8).putLong(nonce).array(); // TODO: check this
-                    signature.update(nonceBytes);
-                    byte[] signedNonce = signature.sign();
-                    out.writeObject(signedNonce);
+                    sendSignedNonce(user, nonce, privKey);
 
                     // Send certificate with public key
                     Certificate cert = kstore.getCertificate(user);
+                    out.writeObject(cert);
 
+                    // Receive confirmation
+                    if (in.readObject().equals(MessageCode.OK)) {
+                        System.exit(-1);
+                    }
+                    System.out.println(MessageCode.OK.getDesc());
                     break;
                 case OK_USER:
                     System.out.println(MessageCode.OK_USER.getDesc());
                     // Send nonce signed with private key
+                    sendSignedNonce(user, nonce, privKey);
+
+                    // Receive confirmation
+                    if (in.readObject().equals(MessageCode.OK)) {
+                        System.exit(-1);
+                    }
+                    System.out.println(MessageCode.OK.getDesc());
                     break;
                 default:
                     System.out.println("Read incorrect code from server.");
@@ -144,6 +153,24 @@ public class IoTDevice {
             // TODO Auto-generated catch block
             e.printStackTrace();
         } catch (UnrecoverableKeyException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        } catch (SignatureException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+    }
+
+    private static void sendSignedNonce(String user, long nonce, PrivateKey privKey) {
+        try { // Send nonce signed with private key
+
+            Signature signature = Signature.getInstance("MD5withRSA");
+            signature.initSign(privKey);
+            byte[] nonceBytes = ByteBuffer.allocate(8).putLong(nonce).array(); // TODO: check this
+            signature.update(nonceBytes);
+            byte[] signedNonce = signature.sign();
+            out.writeObject(signedNonce);
+        } catch (IOException | NoSuchAlgorithmException | InvalidKeyException e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
         } catch (SignatureException e) {
