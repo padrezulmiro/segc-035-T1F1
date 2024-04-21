@@ -10,8 +10,6 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.security.InvalidKeyException;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
@@ -25,6 +23,9 @@ import java.security.cert.CertificateException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Scanner;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
 
@@ -59,6 +60,14 @@ public class IoTDevice {
                     "Error: not enough args!\nUsage: IoTDevice <serverAddress> <truststore> <keystore> <passwordkeystore> <dev-id> <user-id>\n");
             System.exit(1);
         }
+        Pattern p = Pattern.compile("\\w+@{1}\\w+");
+        Matcher m = p.matcher(args[5]);
+        if (m.matches()) {
+            System.out.println(
+                    "Error: user-id should be an email.\n");
+            System.exit(1);
+        }
+
         serverAddress = args[0];
         truststore = args[1];
         keystore = args[2];
@@ -92,58 +101,87 @@ public class IoTDevice {
     }
 
     private static void twoFactorAuth(String user) {
-        // Autenticação baseada em criptografia assimétrica
+
         try {
-            System.out.println("Starting authentication.");
-            out.writeObject(MessageCode.AU);
-            // Send user id
-            out.writeObject(user);
-            // Receive nonce from server
-            long nonce = (long) in.readObject();
+            boolean auth = false;
+            do {
+                // FACTOR 1 - Auth based on asymmetric encryption
+                System.out.println("Starting authentication.");
+                out.writeObject(MessageCode.AU);
+                // Send user id
+                out.writeObject(user);
+                // Receive nonce from server
+                long nonce = (long) in.readObject();
 
-            FileInputStream kfile = new FileInputStream(keystore);
-            KeyStore kstore = KeyStore.getInstance("JCEKS");
-            kstore.load(kfile, psw_keystore.toCharArray());
-            PrivateKey privKey = (PrivateKey) kstore.getKey(user, psw_keystore.toCharArray());
+                FileInputStream kfile = new FileInputStream(keystore);
+                KeyStore kstore = KeyStore.getInstance("JCEKS");
+                kstore.load(kfile, psw_keystore.toCharArray());
+                PrivateKey privKey = (PrivateKey) kstore.getKey(user, psw_keystore.toCharArray());
 
-            // MessageCode used as flag
-            MessageCode code = (MessageCode) in.readObject();
-            switch (code) {
-                case OK_NEW_USER:
-                    System.out.println(MessageCode.OK_NEW_USER.getDesc());
-                    // Send nonce
-                    out.writeObject(nonce);
-                    // Send nonce signed with private key
-                    sendSignedNonce(user, nonce, privKey);
+                // MessageCode used as flag
+                MessageCode code = (MessageCode) in.readObject();
+                switch (code) {
+                    case OK_NEW_USER:
+                        System.out.println(MessageCode.OK_NEW_USER.getDesc());
+                        // Send nonce
+                        out.writeObject(nonce);
+                        // Send nonce signed with private key
+                        sendSignedNonce(user, nonce, privKey);
 
-                    // Send certificate with public key
-                    Certificate cert = kstore.getCertificate(user);
-                    out.writeObject(cert);
+                        // Send certificate with public key
+                        Certificate cert = kstore.getCertificate(user);
+                        out.writeObject(cert);
 
-                    // Receive confirmation
-                    if (in.readObject().equals(MessageCode.OK)) {
+                        // Receive confirmation
+                        if (!in.readObject().equals(MessageCode.OK)) {
+                            System.exit(-1);
+                        }
+                        System.out.println(MessageCode.OK.getDesc());
+                        break;
+                    case OK_USER:
+                        System.out.println(MessageCode.OK_USER.getDesc());
+                        // Send nonce signed with private key
+                        sendSignedNonce(user, nonce, privKey);
+
+                        // Receive confirmation
+                        if (!in.readObject().equals(MessageCode.OK)) {
+                            System.exit(-1);
+                        }
+                        System.out.println(MessageCode.OK.getDesc());
+                        break;
+                    default:
+                        System.out.println("Read incorrect code from server.");
                         System.exit(-1);
-                    }
-                    System.out.println(MessageCode.OK.getDesc());
-                    break;
-                case OK_USER:
-                    System.out.println(MessageCode.OK_USER.getDesc());
-                    // Send nonce signed with private key
-                    sendSignedNonce(user, nonce, privKey);
+                        break;
+                }
 
-                    // Receive confirmation
-                    if (in.readObject().equals(MessageCode.OK)) {
-                        System.exit(-1);
-                    }
-                    System.out.println(MessageCode.OK.getDesc());
-                    break;
-                default:
-                    System.out.println("Read incorrect code from server.");
-                    System.exit(-1);
-                    break;
-            }
+                // FACTOR 2 - Email auth
+                MessageCode emailCode;
+                do {
+                    System.out.println("Check your email for an authentication code.");
+                    Scanner sc = new Scanner(System.in);
+                    System.out.print("> Code: ");
+                    String c2fa = sc.nextLine();
+                    out.writeInt(Integer.valueOf(c2fa));
+                    sc.close();
+                    // receive code
+                    emailCode = (MessageCode) in.readObject();
+                } while (emailCode.equals(MessageCode.EMAIL_FAIL));
 
-        } catch (IOException | ClassNotFoundException | NoSuchAlgorithmException | InvalidKeyException e) {
+                switch (emailCode) {
+                    case OK:
+                        auth = true;
+                        break;
+                    case NOK:
+                        System.out.println("Auhentication has failed, it'll now restart.");
+                        break;
+                    default:
+                        break;
+                }
+
+            } while (!auth);
+
+        } catch (IOException | ClassNotFoundException | NoSuchAlgorithmException e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
         } catch (KeyStoreException e) {
@@ -153,9 +191,6 @@ public class IoTDevice {
             // TODO Auto-generated catch block
             e.printStackTrace();
         } catch (UnrecoverableKeyException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-        } catch (SignatureException e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
         }
@@ -591,42 +626,44 @@ public class IoTDevice {
      * 
      * @param deviceID
      */
-    private static void deviceAuth(String deviceID) {
-        try {
-            System.out.println("Starting device ID authentication.");
-            out.writeObject(MessageCode.AD);
-            out.writeObject(deviceID);
-            boolean validID = false;
-
-            // out.writeObject(deviceID); //probably only once
-
-            do {
-                MessageCode code = (MessageCode) in.readObject();
-                switch (code) {
-                    case NOK_DEVID:
-                        System.out.println(MessageCode.NOK_DEVID.getDesc());
-
-                        // Scanner sc = new Scanner(System.in);
-                        System.out.println("New device ID:");
-                        String newID = sc.nextLine();
-                        // sc.close();
-                        out.writeObject(MessageCode.AD);
-                        out.writeObject(newID);
-                        break;
-                    case OK_DEVID:
-                        System.out.println(MessageCode.OK_DEVID.getDesc());
-                        validID = true;
-                    default:
-                        break;
-                }
-            } while (!validID);
-
-        } catch (IOException e) {
-            System.err.println("ERROR" + e.getMessage());
-            System.exit(-1);
-        } catch (ClassNotFoundException e) {
-            e.printStackTrace();
-            System.exit(-1);
-        }
-    }
+    /*
+     * private static void deviceAuth(String deviceID) {
+     * try {
+     * System.out.println("Starting device ID authentication.");
+     * out.writeObject(MessageCode.AD);
+     * out.writeObject(deviceID);
+     * boolean validID = false;
+     * 
+     * // out.writeObject(deviceID); //probably only once
+     * 
+     * do {
+     * MessageCode code = (MessageCode) in.readObject();
+     * switch (code) {
+     * case NOK_DEVID:
+     * System.out.println(MessageCode.NOK_DEVID.getDesc());
+     * 
+     * // Scanner sc = new Scanner(System.in);
+     * System.out.println("New device ID:");
+     * String newID = sc.nextLine();
+     * // sc.close();
+     * out.writeObject(MessageCode.AD);
+     * out.writeObject(newID);
+     * break;
+     * case OK_DEVID:
+     * System.out.println(MessageCode.OK_DEVID.getDesc());
+     * validID = true;
+     * default:
+     * break;
+     * }
+     * } while (!validID);
+     * 
+     * } catch (IOException e) {
+     * System.err.println("ERROR" + e.getMessage());
+     * System.exit(-1);
+     * } catch (ClassNotFoundException e) {
+     * e.printStackTrace();
+     * System.exit(-1);
+     * }
+     * }
+     */
 }
