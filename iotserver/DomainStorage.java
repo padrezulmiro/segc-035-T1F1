@@ -75,9 +75,9 @@ public class DomainStorage {
         for (String fullDevID : domain.getDevices()) {
             String userID = Utils.userIDFromFullID(fullDevID);
             String devID = Utils.devIDFromFullID(fullDevID);
-            float devTemperature =
+            Float devTemperature =
                 devStorage.getDeviceTemperature(userID, devID);
-            temperatures.put(fullDevID, devTemperature);
+                temperatures.put(fullDevID, devTemperature);
         }
         return temperatures;
     }

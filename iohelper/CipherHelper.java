@@ -133,16 +133,4 @@ public class CipherHelper {
         return kstore;
     }
 
-    // public static String encryptDomainKey(KeyStore trustStore, String domkeyLocation, String alias, String domPwd)
-    //     throws KeyStoreException, NoSuchAlgorithmException, InvalidKeySpecException,
-    //         IOException, InvalidKeyException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException{
-        
-    //     Certificate newUserCert = trustStore.getCertificate(alias); // sth here is fucked up
-    //     // get user's pk
-    //     PublicKey pk = newUserCert.getPublicKey();
-    //     // generate domkey with dompwd
-    //     SecretKey skey = CipherHelper.getKeyFromPwd(domPwd,domkeyLocation);
-    //     // encrypt domkey with pk of the new user
-    //     return Base64.getEncoder().encodeToString(CipherHelper.encrypt("RSA",pk, skey.getEncoded()));
-    // }
 }

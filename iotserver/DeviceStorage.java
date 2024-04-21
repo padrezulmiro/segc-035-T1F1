@@ -68,7 +68,7 @@ public class DeviceStorage {
         updateDevicesFile();
     }
 
-    public float getDeviceTemperature(String userID, String devID) {
+    public Float getDeviceTemperature(String userID, String devID) {
         return devices.get(Utils.fullID(userID, devID)).getTemperature();
     }
 
