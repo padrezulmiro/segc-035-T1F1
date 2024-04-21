@@ -101,7 +101,7 @@ public class ServerThread extends Thread {
         out.writeObject(manager.authenticateUser(userID).responseCode());
     }
 
-    //XXX Replace this with authUser()
+    //TODO Replace this with authUser()
     private void authUserNew() throws ClassNotFoundException, IOException,
             InvalidKeyException, CertificateException, NoSuchAlgorithmException,
             SignatureException {
@@ -113,25 +113,10 @@ public class ServerThread extends Thread {
 
         if (sa.isUserRegistered(userID)) {
             out.writeObject(MessageCode.OK_USER);
-
-            byte[] signedNonce = (byte[]) in.readObject();
-            if (sa.verifySignedNonce(signedNonce, userID, nonce)) {
-                out.writeObject(MessageCode.OK);
-            } else {
-                //FIXME Create a new message code type
-                out.writeObject(MessageCode.WRONG_PWD);
-            }
+            authRegisteredUser(nonce);
         } else {
             out.writeObject(MessageCode.OK_NEW_USER);
-
-            long receivedUnsignedNonce = in.readLong();
-            byte[] signedNonce = (byte[]) in.readObject();
-            Certificate cert = (Certificate) in.readObject();
-
-            if (sa.verifySignedNonce(signedNonce, userID, nonce) &&
-                    receivedUnsignedNonce == nonce) {
-
-            }
+            authUnregisteredUser(nonce);
         }
     }
 
@@ -223,6 +208,38 @@ public class ServerThread extends Thread {
         // Send file (if aplicable)
         if( rCode == MessageCode.OK){
             FileHelper.sendFile(sr.filePath(), out);
+        }
+    }
+
+    private void authUnregisteredUser(long nonce) throws IOException,
+            ClassNotFoundException, InvalidKeyException, CertificateException,
+            NoSuchAlgorithmException, SignatureException {
+        ServerAuth sa = IoTServer.SERVER_AUTH;
+
+        long receivedUnsignedNonce = in.readLong();
+        byte[] signedNonce = (byte[]) in.readObject();
+        Certificate cert = (Certificate) in.readObject();
+
+        if (sa.verifySignedNonce(signedNonce, userID, nonce) &&
+                receivedUnsignedNonce == nonce) {
+            sa.registerUser(userID, Utils.certPathFromUser(userID));
+            out.writeObject(MessageCode.OK);
+        } else {
+            out.writeObject(MessageCode.WRONG_PWD);
+        }
+    }
+
+    private void authRegisteredUser(long nonce) throws ClassNotFoundException,
+            IOException, InvalidKeyException, CertificateException,
+            NoSuchAlgorithmException, SignatureException {
+        ServerAuth sa = IoTServer.SERVER_AUTH;
+
+        byte[] signedNonce = (byte[]) in.readObject();
+        if (sa.verifySignedNonce(signedNonce, userID, nonce)) {
+            out.writeObject(MessageCode.OK);
+        } else {
+            //FIXME Create a new message code type
+            out.writeObject(MessageCode.WRONG_PWD);
         }
     }
 }

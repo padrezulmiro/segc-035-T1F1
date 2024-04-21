@@ -44,6 +44,14 @@ public class ServerAuth {
         return userStorage.isUserRegistered(user);
     }
 
+    public boolean registerUser(String user, String certPath) {
+        return userStorage.registerUser(user, certPath);
+    }
+
+    public String userCertPath(String user) {
+        return userStorage.userCertPath(user);
+    }
+
     public boolean verifySignedNonce(byte[] signedNonce, String user, long nonce)
             throws FileNotFoundException, IOException, CertificateException,
             NoSuchAlgorithmException, InvalidKeyException, SignatureException {
