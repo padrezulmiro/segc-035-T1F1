@@ -97,7 +97,7 @@ public class ServerManager {
             }
 
             boolean ret = domStorage
-                .addUserToDomain(requesterUID, newUserID, domainName, enDomkey);
+                .addUserToDomain(newUserID, domainName, enDomkey);
             if (ret) {
                 return new ServerResponse(MessageCode.OK);
             } else {

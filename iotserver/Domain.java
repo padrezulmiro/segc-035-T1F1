@@ -20,11 +20,11 @@ public class Domain {
     }
 
     public boolean registerUser(String userId, String enDomkey) {
-        if (this.isOwner(userId)){
-            return false;
-        }
+        // if (this.isOwner(userId)){ // BECAUSE you'll have to register owner as well
+        //     return false;
+        // }
         if(registeredUsers.add(userId)){
-            enDomkeyMap.put(userId, enDomkey);
+            registerEncryptedDomainKey(userId, enDomkey);
             return true;
         }
         return false;
@@ -35,7 +35,7 @@ public class Domain {
     }
 
     public boolean isRegistered(String userId) {
-        return registeredUsers.contains(userId) || isOwner(userId);
+        return registeredUsers.contains(userId); // || isOwner(userId);
     }
 
     public boolean registerDevice(String deviceFullID) {
@@ -58,6 +58,10 @@ public class Domain {
         return this.registeredUsers;
     }
 
+    public void registerEncryptedDomainKey(String user, String enDomkey){
+        enDomkeyMap.put(user, enDomkey);
+    }
+
     @Override
     public String toString() {
         final char NL = '\n';
@@ -65,18 +69,15 @@ public class Domain {
         final char SP = ':';
 
         StringBuilder sb = new StringBuilder();
-        sb.append(getName() + SP + ownerId);
+        sb.append(getName() + SP + ownerId + NL);
 
         for (String registeredUser : registeredUsers) {
-            sb.append(SP + registeredUser);
-            sb.append(SP + enDomkeyMap.get(registeredUser));
-            // append user's associated endomkey as well
+            sb.append("" + TAB + registeredUser);
+            sb.append(SP + enDomkeyMap.get(registeredUser) + NL);
         }
-
-        sb.append(NL);
-
+        
         for (String devFullId : devices) {
-            sb.append(TAB + devFullId + NL);
+            sb.append(TAB + "" + TAB + devFullId + NL);
         }
 
         return sb.toString();

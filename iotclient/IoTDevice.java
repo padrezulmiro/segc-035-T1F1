@@ -76,7 +76,6 @@ public class IoTDevice {
             keyStore = CipherHelper.getKeyStore(keystore, psw_keystore);
         } catch (NoSuchAlgorithmException | CertificateException | KeyStoreException | IOException e) {
             // TODO Auto-generated catch block
-            System.out.println("test. caught: ");
             e.printStackTrace();
         } //TODO: get rid of trustStore password
         
@@ -207,7 +206,7 @@ public class IoTDevice {
                     long fileSize = (long) in.readObject(); // Read file size
                     System.out.println("FIle size:" + fileSize);
                     // String[] dev = device.split(":");
-                    String fileName = "Img_" + dev[0] + "_" + dev[1] + ".jpg";
+                    String fileName = baseDir + "img_" + dev[0] + "_" + dev[1] + ".jpg";
                     FileHelper.receiveFile(fileSize, fileName, in);
                     System.out.println(MessageCode.OK.getDesc() + ", " + fileSize + " (long)"); // TODO
                     break;
@@ -250,7 +249,7 @@ public class IoTDevice {
                     // essentially ClassCastException will be thrown if any of the maps is bad
 
                     // TODO: write it to file
-                    File f = new File(("temps_" + domain + ".txt"));
+                    File f = new File((baseDir + "temps_" + domain + ".txt"));
                     BufferedWriter output = FileHelper.createFileWriter(f);
                     for (Map.Entry<String, Float> entry : temps.entrySet()) {
                         output.write(entry.getKey() + ":" + entry.getValue() + System.getProperty("line.separator"));
@@ -362,17 +361,19 @@ public class IoTDevice {
     private static void addUser(String user, String domain, String domPwd) {
         try {
 
+            // String domkeyLocation = domkeyParamPath + domain + ".txt";
             // get user's cert
             Certificate newUserCert = trustStore.getCertificate(user); // sth here is fucked up
             // get user's pk
             PublicKey pk = newUserCert.getPublicKey();
             // generate domkey with dompwd
-            String domkeyLocation = domkeyParamPath + domain;
+            String domkeyLocation = domkeyParamPath + domain + ".txt";
             SecretKey skey = CipherHelper.getKeyFromPwd(domPwd,domkeyLocation);
             // encrypt domkey with pk of the new user
             String enDomkey = Base64.getEncoder().
                     encodeToString(CipherHelper.encrypt("RSA",
                                                                     pk, skey.getEncoded()));
+            // String enDomkey = CipherHelper.encryptDomainKey(trustStore,domkeyLocation,user,domPwd);
 
             out.writeObject(MessageCode.ADD); // Send opcode
             out.writeObject(user); // Send user
@@ -398,27 +399,9 @@ public class IoTDevice {
                 default:
                     break;
             }
-        } catch (IOException | ClassNotFoundException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-        } catch (KeyStoreException e){
-            e.printStackTrace();
-        } catch (NoSuchAlgorithmException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-        } catch (InvalidKeySpecException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-        } catch (InvalidKeyException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-        } catch (NoSuchPaddingException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-        } catch (IllegalBlockSizeException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-        } catch (BadPaddingException e) {
+        } catch (IOException | ClassNotFoundException | KeyStoreException 
+        | NoSuchAlgorithmException | InvalidKeySpecException | InvalidKeyException 
+        | NoSuchPaddingException | IllegalBlockSizeException | BadPaddingException e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
         }

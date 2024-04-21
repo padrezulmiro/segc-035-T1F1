@@ -47,7 +47,7 @@ public class DomainStorage {
         updateDomainsFile();
     }
 
-    public boolean addUserToDomain(String requesterUID, String newUserID,
+    public boolean addUserToDomain(String newUserID,
             String domainName, String enDomkey) {
         Domain domain = domains.get(domainName);
         boolean ret = domain.registerUser(newUserID, enDomkey);
@@ -159,32 +159,27 @@ public class DomainStorage {
         for (int i = 0; i < lines.length; i++) {
             String line = lines[i];
             boolean isDomainLine = line.charAt(0) != TAB;
+            boolean isEnDomKeyLine = line.charAt(1) != TAB;
             String[] tokens = Utils.split(line, SP);
 
             if (isDomainLine) {
                 currentDomainName = tokens[0];
-                initDomainFromLine(tokens);
-            } else {
+                String owner = tokens[1];
+                Domain domain = new Domain(currentDomainName, owner);
+                domains.put(currentDomainName, domain);
+            } else if(isEnDomKeyLine){
+                String devUID = tokens[0];
+                String enDomkey = tokens[1];
+                domains
+                .get(currentDomainName)
+                .registerUser(devUID,enDomkey);
+            }else {
                 String devUID = tokens[0];
                 String devDID = tokens[1];
                 domains
-                    .get(currentDomainName)
-                    .registerDevice(Utils.fullID(devUID, devDID));
+                .get(currentDomainName)
+                .registerDevice(Utils.fullID(devUID, devDID));
             }
         }
-    }
-
-    private void initDomainFromLine(String[] tokens) {
-        String domainName = tokens[0];
-        String owner = tokens[1];
-        String enDomkey = tokens[2];
-
-        Domain domain = new Domain(domainName, owner);
-        for (int j = 2; j < tokens.length; j++) {
-            String user = tokens[j];
-            domain.registerUser(user,enDomkey);
-        }
-
-        domains.put(domainName, domain);
     }
 }

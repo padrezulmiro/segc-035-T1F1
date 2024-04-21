@@ -12,6 +12,7 @@ import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.PublicKey;
 import java.security.SecureRandom;
+import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.KeySpec;
@@ -66,17 +67,12 @@ public class CipherHelper {
         int iterations = params.getIteration();
         KeySpec spec = new PBEKeySpec(pwd.toCharArray(), salt, iterations, 128);
 
-        try {
-            File paramFile = new File(paramFilePath);
-            BufferedWriter output = FileHelper.createFileWriter(paramFile);
-            output.write(Base64.getEncoder().encodeToString(salt));
-            output.write(System.getProperty("line.separator"));
-            output.write(iterations);
-            // File f = FileHelper.receiveFile( paramFilePath, null);
-
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        File paramFile = new File(paramFilePath);
+        BufferedWriter output = FileHelper.createFileWriter(paramFile);
+        output.write(Base64.getEncoder().encodeToString(salt));
+        output.write(System.getProperty("line.separator"));
+        output.write(iterations);
+        // File f = FileHelper.receiveFile( paramFilePath, null);
         
         SecretKey sKey = factory.generateSecret(spec);
         return sKey;
@@ -137,4 +133,16 @@ public class CipherHelper {
         return kstore;
     }
 
+    // public static String encryptDomainKey(KeyStore trustStore, String domkeyLocation, String alias, String domPwd)
+    //     throws KeyStoreException, NoSuchAlgorithmException, InvalidKeySpecException,
+    //         IOException, InvalidKeyException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException{
+        
+    //     Certificate newUserCert = trustStore.getCertificate(alias); // sth here is fucked up
+    //     // get user's pk
+    //     PublicKey pk = newUserCert.getPublicKey();
+    //     // generate domkey with dompwd
+    //     SecretKey skey = CipherHelper.getKeyFromPwd(domPwd,domkeyLocation);
+    //     // encrypt domkey with pk of the new user
+    //     return Base64.getEncoder().encodeToString(CipherHelper.encrypt("RSA",pk, skey.getEncoded()));
+    // }
 }
