@@ -35,7 +35,7 @@ public class FileHelper {
         long fileSize = f.length();
         try {
             // Send file name
-            out.writeObject(f.getName());
+            // out.writeObject(f.getName());
             // Send file size
             out.writeObject(fileSize);
 

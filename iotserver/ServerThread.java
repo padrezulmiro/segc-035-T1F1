@@ -60,7 +60,7 @@ public class ServerThread extends Thread {
                         registerTemperature();
                         break;
                     case EI:
-                        registerImage();
+                        registerImage(userID,deviceID);
                         break;
                     case RT:
                         getTemperatures();
@@ -90,7 +90,7 @@ public class ServerThread extends Thread {
     private void getImage() throws IOException, ClassNotFoundException {
         String targetUser = (String)in.readObject();
         String targetDev = (String)in.readObject();
-        ServerResponse sr = manager.getImage(this.userID,targetUser,targetDev);
+        ServerResponse sr = manager.getImage(this.userID,targetUser,targetDev,IMAGE_DIR_PATH);
         MessageCode rCode=sr.responseCode();
         // Send code to client
         out.writeObject(rCode);
@@ -112,8 +112,9 @@ public class ServerThread extends Thread {
         }
     }
 
-    private void registerImage() throws IOException, ClassNotFoundException {
-        String filename = (String)in.readObject();
+    private void registerImage(String devUID, String devDID)
+                throws IOException, ClassNotFoundException {
+        String filename = devUID + "_" + devDID + ".jpg"; //(String)in.readObject(); // screw this
         long fileSize = (long)in.readObject();
         String fullImgPath = IMAGE_DIR_PATH + filename;
 

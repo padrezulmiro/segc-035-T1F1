@@ -205,11 +205,11 @@ public class IoTDevice {
             switch (code) {
                 case OK:
                     String enDomkey = (String) in.readObject();
-                    String s = (String) in.readObject(); // This is discarded
+                    // String s = (String) in.readObject(); // This is discarded
                     long fileSize = (long) in.readObject(); // Read file size
                     System.out.println("FIle size:" + fileSize);
                     // String[] dev = device.split(":");
-                    String fileName = baseDir + "img_" + dev[0] + "_" + dev[1] + ".jpg";
+                    String fileName = baseDir + dev[0] + "_" + dev[1] + ".jpg";
                     FileHelper.receiveFile(fileSize, fileName, in);
                     System.out.println(MessageCode.OK.getDesc() + ", " + fileSize + " (long)"); // TODO
                     break;

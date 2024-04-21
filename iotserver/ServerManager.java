@@ -185,7 +185,7 @@ public class ServerManager {
     }
 
     public ServerResponse getImage(String requesterUID, String targetUID,
-            String targetDID) {
+            String targetDID, String serverImgFolder) {
         domStorage.readLock();
         devStorage.readLock();
         try {
@@ -201,7 +201,7 @@ public class ServerManager {
             String domainName = domStorage.hasAccessToDeviceIn(requesterUID, targetUID, targetDID);
             if (domainName!=null) {
                 String enDomkey = domStorage.getDeviceEncryptedDomainKey(domainName, requesterUID);
-                return new ServerResponse(MessageCode.OK, filepath, enDomkey);
+                return new ServerResponse(MessageCode.OK, serverImgFolder+filepath, enDomkey);
             }
 
             return new ServerResponse(MessageCode.NOPERM);
