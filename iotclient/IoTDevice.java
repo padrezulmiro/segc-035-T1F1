@@ -47,7 +47,7 @@ public class IoTDevice {
         userid = args[5];
 
         System.setProperty("javax.net.ssl.trustStore", truststore);
-        System.setProperty("javax.net.ssl.trustStorePassword", psw_keystore);
+        System.setProperty("javax.net.ssl.trustStorePassword", "");
         System.setProperty("javax.net.ssl.trustStoreType", "JCEKS");
         System.setProperty("javax.net.ssl.keyStore", keystore);
         System.setProperty("javax.net.ssl.keyStorePassword", psw_keystore);
