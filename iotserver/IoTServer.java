@@ -39,6 +39,8 @@ public class IoTServer {
             System.exit(-1);
         }
 
+        IoTServer.SERVER_AUTH.setApiKey(apiKeyArg);
+
         System.setProperty("javax.net.ssl.keyStore", keystorePathArg);
         System.setProperty("javax.net.ssl.keyStorePassword", keystorePwdArg);
         System.setProperty("javax.net.ssl.keyStoreType", "JCEKS");

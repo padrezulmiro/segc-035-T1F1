@@ -101,7 +101,7 @@ public class ServerThread extends Thread {
         out.writeObject(manager.authenticateUser(userID).responseCode());
     }
 
-    //TODO Replace this with authUser()
+    //TODO Replace this with authUser(), create new message codes, handle bad email response code
     private void authUserNew() throws ClassNotFoundException, IOException,
             InvalidKeyException, CertificateException, NoSuchAlgorithmException,
             SignatureException {
@@ -117,6 +117,16 @@ public class ServerThread extends Thread {
         } else {
             out.writeObject(MessageCode.OK_NEW_USER);
             authUnregisteredUser(nonce);
+        }
+
+        int twoFACode = sa.generate2FACode();
+        int emailResponseCode = sa.send2FAEmail(userID, twoFACode);
+
+        int receivedTwoFACode = in.readInt();
+        if (twoFACode == receivedTwoFACode) {
+            out.writeObject(MessageCode.OK);
+        } else {
+            out.writeObject(MessageCode.NOK);
         }
     }
 
