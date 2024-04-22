@@ -165,8 +165,6 @@ public class ServerThread extends Thread {
             manager.disconnectDevice(userID, deviceID);
             out.writeObject(MessageCode.NOK_TESTED);
         }
-
-
     }
 
     private void createDomain() throws IOException, ClassNotFoundException {
