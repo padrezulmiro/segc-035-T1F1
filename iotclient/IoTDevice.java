@@ -159,12 +159,11 @@ public class IoTDevice {
                 // FACTOR 2 - Email auth
                 MessageCode emailCode;
                 do {
-                    System.out.println("Check your email for an authentication code.");
-                    Scanner sc = new Scanner(System.in);
+                    System.out.println("Check your email for an authentication code.");;
                     System.out.print("> Code: ");
                     String c2fa = sc.nextLine();
                     out.writeInt(Integer.valueOf(c2fa));
-                    sc.close();
+                    out.flush();
                     // receive code
                     emailCode = (MessageCode) in.readObject();
                 } while (emailCode.equals(MessageCode.EMAIL_FAIL));
@@ -172,6 +171,7 @@ public class IoTDevice {
                 switch (emailCode) {
                     case OK:
                         auth = true;
+                        System.out.println("Auhentication ok.");
                         break;
                     case NOK:
                         System.out.println("Auhentication has failed, it'll now restart.");
