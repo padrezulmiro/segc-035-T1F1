@@ -60,9 +60,9 @@ public class IoTDevice {
                     "Error: not enough args!\nUsage: IoTDevice <serverAddress> <truststore> <keystore> <passwordkeystore> <dev-id> <user-id>\n");
             System.exit(1);
         }
-        Pattern p = Pattern.compile("\\w+@{1}\\w+");
+        Pattern p = Pattern.compile(".+@{1}.+");
         Matcher m = p.matcher(args[5]);
-        if (m.matches()) {
+        if (!m.matches()) {
             System.out.println(
                     "Error: user-id should be an email.\n");
             System.exit(1);
@@ -89,7 +89,7 @@ public class IoTDevice {
             // deviceAuth(devid);nesta 2ª fase, o dev-id já não é verificado durante o
             // processo de autenticação,
             // mas será verificado durante o processo de atestação remota (Secção 4.3).
-            testDevice();
+            // testDevice();
             printMenu();
             // Program doesn't end until CTRL+C is pressed
             while (true) {// Steps 8 - 10
@@ -111,7 +111,7 @@ public class IoTDevice {
                 // Send user id
                 out.writeObject(user);
                 // Receive nonce from server
-                long nonce = (long) in.readObject();
+                long nonce = in.readLong();
 
                 FileInputStream kfile = new FileInputStream(keystore);
                 KeyStore kstore = KeyStore.getInstance("JCEKS");
@@ -124,7 +124,7 @@ public class IoTDevice {
                     case OK_NEW_USER:
                         System.out.println(MessageCode.OK_NEW_USER.getDesc());
                         // Send nonce
-                        out.writeObject(nonce);
+                        out.writeLong(nonce);
                         // Send nonce signed with private key
                         sendSignedNonce(user, nonce, privKey);
 
@@ -133,6 +133,7 @@ public class IoTDevice {
                         out.writeObject(cert);
 
                         // Receive confirmation
+                        // TODO handle receiving WRONG_NONCE
                         if (!in.readObject().equals(MessageCode.OK)) {
                             System.exit(-1);
                         }
@@ -216,9 +217,12 @@ public class IoTDevice {
 
     private static void addCliShutdownHook() {
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            System.out.println("\nCaught Ctrl-C. Shutting down.");
+            System.out.println("\nShutting down.\n");
             try {
-                out.writeObject(MessageCode.STOP);
+                if (out != null) {
+                    out.writeObject(MessageCode.STOP);
+                }
+
                 // Close socket
                 if (clientSocket != null) {
                     clientSocket.close();
@@ -616,7 +620,7 @@ public class IoTDevice {
 
         } catch (IOException e) {
             System.err.println("ERROR: " + e.getMessage());
-            System.exit(-1);
+            // System.exit(-1);
         }
         return false;
     }
