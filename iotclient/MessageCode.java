@@ -31,7 +31,8 @@ public enum MessageCode {
     RT("RT <dm> # Receive the latest Temperatures for every device of domain <dm>, as long as user has permission"),
     RI("RI <user-id>:<dev-id> # Receive Image file from <user-id>:<dev-id>, as long as user has permission."),
     STOP("STOP # Client has been shut down."),
-    EMAIL_FAIL("EMAIL_FAIL # Email sending API failed.");
+    EMAIL_FAIL("EMAIL_FAIL # Email sending API failed."), 
+    WRONG_NONCE("WRONG_NONCE # ");
 
 
 
