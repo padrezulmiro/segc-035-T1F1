@@ -83,6 +83,18 @@ public class ServerThread extends Thread {
         } catch (ClassNotFoundException e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
+        } catch (InvalidKeyException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        } catch (CertificateException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        } catch (NoSuchAlgorithmException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        } catch (SignatureException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
         }
     }
 
@@ -92,19 +104,20 @@ public class ServerThread extends Thread {
         isRunning = false;
     }
 
-    private void authUser() throws IOException, ClassNotFoundException {
+    /*private void authUser() throws IOException, ClassNotFoundException {
         if (this.userID==null){
             this.userID = (String) in.readObject();
         }
 
         String pwd = (String) in.readObject();
         out.writeObject(manager.authenticateUser(userID).responseCode());
-    }
+    }*/
 
     //TODO Replace this with authUser(), create new message codes, handle bad email response code
-    private void authUserNew() throws ClassNotFoundException, IOException,
+    private void authUser() throws ClassNotFoundException, IOException,
             InvalidKeyException, CertificateException, NoSuchAlgorithmException,
             SignatureException {
+            System.out.println("Starting user auth.");
         ServerAuth sa = IoTServer.SERVER_AUTH;
         userID = (String) in.readObject();
 
@@ -120,7 +133,7 @@ public class ServerThread extends Thread {
         }
 
         int twoFACode = sa.generate2FACode();
-        int emailResponseCode = sa.send2FAEmail(userID, twoFACode);
+        //int emailResponseCode = sa.send2FAEmail(userID, twoFACode);
 
         int receivedTwoFACode = in.readInt();
         if (twoFACode == receivedTwoFACode) {
@@ -235,7 +248,7 @@ public class ServerThread extends Thread {
             sa.registerUser(userID, Utils.certPathFromUser(userID));
             out.writeObject(MessageCode.OK);
         } else {
-            out.writeObject(MessageCode.WRONG_PWD);
+            out.writeObject(MessageCode.WRONG_NONCE);
         }
     }
 
@@ -248,8 +261,7 @@ public class ServerThread extends Thread {
         if (sa.verifySignedNonce(signedNonce, userID, nonce)) {
             out.writeObject(MessageCode.OK);
         } else {
-            //FIXME Create a new message code type
-            out.writeObject(MessageCode.WRONG_PWD);
+            out.writeObject(MessageCode.WRONG_NONCE);
         }
     }
 }
