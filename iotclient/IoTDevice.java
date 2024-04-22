@@ -15,7 +15,9 @@ import java.security.InvalidKeyException;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
+import java.security.PrivateKey;
 import java.security.PublicKey;
+import java.security.UnrecoverableKeyException;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
 import java.security.spec.InvalidKeySpecException;
@@ -44,6 +46,7 @@ public class IoTDevice {
     static ObjectOutputStream out;
     static KeyStore trustStore;
     static KeyStore keyStore;
+    static PrivateKey privateKey;
     static int iterationRounds;
 
     private static String baseDir; // defined after userid is given
@@ -65,6 +68,8 @@ public class IoTDevice {
         String truststore = args[1];
         String keystore = args[2];
         String psw_keystore = args[3];
+        devid = args[4];
+        userid = args[5];
 
         System.setProperty("javax.net.ssl.trustStore", truststore);
         System.setProperty("javax.net.ssl.trustStorePassword", "");
@@ -72,17 +77,17 @@ public class IoTDevice {
         System.setProperty("javax.net.ssl.keyStore", keystore);
         System.setProperty("javax.net.ssl.keyStorePassword", psw_keystore);
         System.setProperty("javax.net.ssl.keyStoreType", "JCEKS");
-        
+
         try {
             trustStore = CipherHelper.getKeyStore(truststore, "iotclient");
             keyStore = CipherHelper.getKeyStore(keystore, psw_keystore);
-        } catch (NoSuchAlgorithmException | CertificateException | KeyStoreException | IOException e) {
+            privateKey = (PrivateKey) keyStore.getKey(userid, psw_keystore.toCharArray());
+        } catch (NoSuchAlgorithmException | CertificateException | 
+                    KeyStoreException | IOException | UnrecoverableKeyException e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
         } //TODO: get rid of trustStore password
-        
-        devid = args[4];
-        userid = args[5];
+
         baseDir = "./output/" + userid + "/"; 
         domkeyParamPath = baseDir + "domkey/";
         new File(domkeyParamPath).mkdirs();
@@ -97,7 +102,14 @@ public class IoTDevice {
             while (true) {// Steps 8 - 10
                 System.out.print("> ");
                 String command = sc.nextLine();
-                executeCommand(command);
+                try {
+                    executeCommand(command);
+                } catch (InvalidKeyException | NoSuchAlgorithmException | NoSuchPaddingException
+                        | IllegalBlockSizeException | BadPaddingException | KeyStoreException | InvalidKeySpecException
+                        | ClassNotFoundException | IOException e) {
+                    // TODO Auto-generated catch block
+                    e.printStackTrace();
+                }
             }
         }
     }
@@ -122,8 +134,20 @@ public class IoTDevice {
      * Takes a string and executes the corresponding command.
      * 
      * @param command
+     * @throws BadPaddingException 
+     * @throws IllegalBlockSizeException 
+     * @throws NoSuchPaddingException 
+     * @throws NoSuchAlgorithmException 
+     * @throws InvalidKeyException 
+     * @throws IOException 
+     * @throws ClassNotFoundException 
+     * @throws InvalidKeySpecException 
+     * @throws KeyStoreException 
      */
-    private static void executeCommand(String command) {
+    private static void executeCommand(String command)
+        throws InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException,
+                IllegalBlockSizeException, BadPaddingException, KeyStoreException,
+                InvalidKeySpecException, ClassNotFoundException, IOException {
         // First word is the command
         String[] cmds = command.split(" ");
         String op = cmds[0].toUpperCase();
@@ -307,10 +331,36 @@ public class IoTDevice {
      * Sends a temperature value to the server.
      * 
      * @param temp
+     * @throws BadPaddingException 
+     * @throws IllegalBlockSizeException 
+     * @throws NoSuchPaddingException 
+     * @throws NoSuchAlgorithmException 
+     * @throws InvalidKeyException 
      */
-    private static void sendTemperature(String temp) { // Should it test if the value can be converted to a float?
+    private static void sendTemperature(String temp) 
+        throws InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException,
+                IllegalBlockSizeException, BadPaddingException { // Should it test if the value can be converted to a float?
         try {
             out.writeObject(MessageCode.ET); // Send opcode
+
+            // send opcode for domainkeys request
+            out.writeObject(MessageCode.RDK); 
+            // read a ServerResponse for confirmation + domkeys
+            ServerResponse sr = (ServerResponse)in.readObject();
+            if(sr.responseCode()!=MessageCode.OK){return;}
+            HashMap<String,String> enDomkeysMap = sr.allEncryptedDomainKeys();
+            // for every domkey: unwrap with privatekey, encrypt temp with domain key, and then send
+            for (String dom : enDomkeysMap.keySet()){
+                String enDomkey = enDomkeysMap.get(dom);
+                byte[] wrappedKey = Base64.getDecoder().decode(enDomkey);
+                SecretKey sKey = (SecretKey) CipherHelper.unwrap(privateKey, wrappedKey);
+                // CipherHelper.encrypt(temp, null, wrappedKey)
+                // use sKey to encrypt temp
+            }
+            
+            //
+            // String enTemp = CipherHelper.decryptString("RSA",privateKey, temp);
+            
             out.writeObject(temp); // Send user
             // Receive message
             MessageCode code = (MessageCode) in.readObject();
@@ -362,53 +412,54 @@ public class IoTDevice {
      * 
      * @param user
      * @param domain
+     * @throws KeyStoreException 
+     * @throws IOException 
+     * @throws InvalidKeySpecException 
+     * @throws NoSuchAlgorithmException 
+     * @throws BadPaddingException 
+     * @throws IllegalBlockSizeException 
+     * @throws NoSuchPaddingException 
+     * @throws InvalidKeyException 
+     * @throws ClassNotFoundException 
      */
-    private static void addUser(String user, String domain, String domPwd) {
-        try {
+    private static void addUser(String user, String domain, String domPwd)
+        throws KeyStoreException, NoSuchAlgorithmException, InvalidKeySpecException,
+                IOException, InvalidKeyException, NoSuchPaddingException, 
+                IllegalBlockSizeException, BadPaddingException, ClassNotFoundException {
+        // String domkeyLocation = domkeyParamPath + domain + ".txt";
+        // get user's cert
+        Certificate newUserCert = trustStore.getCertificate(user); 
+        // get user's pk
+        PublicKey pk = newUserCert.getPublicKey();
+        // generate domkey with dompwd
+        String domkeyLocation = domkeyParamPath + domain + ".txt";
+        SecretKey skey = CipherHelper.getSecretKeyFromPwd(domain, domPwd,domkeyLocation);
+        // encrypt domkey with pk of the new user
+        byte[] enDomkey = CipherHelper.wrapSkey(pk,skey);
 
-            // String domkeyLocation = domkeyParamPath + domain + ".txt";
-            // get user's cert
-            Certificate newUserCert = trustStore.getCertificate(user); // sth here is fucked up
-            // get user's pk
-            PublicKey pk = newUserCert.getPublicKey();
-            // generate domkey with dompwd
-            String domkeyLocation = domkeyParamPath + domain + ".txt";
-            SecretKey skey = CipherHelper.getKeyFromPwd(domPwd,domkeyLocation);
-            // encrypt domkey with pk of the new user
-            String enDomkey = Base64.getEncoder().
-                    encodeToString(CipherHelper.encrypt("RSA",
-                                                                    pk, skey.getEncoded()));
-            // String enDomkey = CipherHelper.encryptDomainKey(trustStore,domkeyLocation,user,domPwd);
-
-            out.writeObject(MessageCode.ADD); // Send opcode
-            out.writeObject(user); // Send user
-            out.writeObject(domain); // Send domain
-            out.writeObject(enDomkey); // SendDomKey to server
-            // Receive message
-            MessageCode code = (MessageCode) in.readObject();
-            switch (code) {
-                case OK:
-                    System.out.println(MessageCode.OK.getDesc());
-                    break;
-                case NOPERM:
-                    System.out.println(MessageCode.NOPERM.getDesc());
-                    break;
-                case NODM:
-                    System.out.println(MessageCode.NODM.getDesc());
-                    break;
-                case NOUSER:
-                    System.out.println(MessageCode.NOUSER.getDesc());
-                    break;
-                case USEREXISTS:
-                    System.out.println(MessageCode.USEREXISTS.getDesc());
-                default:
-                    break;
-            }
-        } catch (IOException | ClassNotFoundException | KeyStoreException 
-        | NoSuchAlgorithmException | InvalidKeySpecException | InvalidKeyException 
-        | NoSuchPaddingException | IllegalBlockSizeException | BadPaddingException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
+        out.writeObject(MessageCode.ADD); // Send opcode
+        out.writeObject(user); // Send user
+        out.writeObject(domain); // Send domain
+        out.writeObject(Base64.getEncoder().encodeToString(enDomkey)); // SendDomKey to server
+        // Receive message
+        MessageCode code = (MessageCode) in.readObject();
+        switch (code) {
+            case OK:
+                System.out.println(MessageCode.OK.getDesc());
+                break;
+            case NOPERM:
+                System.out.println(MessageCode.NOPERM.getDesc());
+                break;
+            case NODM:
+                System.out.println(MessageCode.NODM.getDesc());
+                break;
+            case NOUSER:
+                System.out.println(MessageCode.NOUSER.getDesc());
+                break;
+            case USEREXISTS:
+                System.out.println(MessageCode.USEREXISTS.getDesc());
+            default:
+                break;
         }
     }
 

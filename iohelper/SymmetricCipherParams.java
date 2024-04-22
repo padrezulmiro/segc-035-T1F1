@@ -1,4 +1,8 @@
 package iohelper;
+
+import java.util.Arrays;
+import java.util.Base64;
+
 public class SymmetricCipherParams{
     private byte[] salt;
     private int iteration;
@@ -18,8 +22,13 @@ public class SymmetricCipherParams{
         return salt;
     }
 
-    public int getIteration() {
+    public int getIterations() {
         return iteration;
+    }
+
+    @Override
+    public String toString() {
+        return Base64.getEncoder().encodeToString(this.getSalt()) + ":" + iteration;
     }
     
 }

@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
@@ -46,6 +47,10 @@ public class DeviceStorage {
         device.goOnline();
         devices.put(Utils.fullID(userID, devID), device);
         updateDevicesFile();
+    }
+
+    public Set<String> getDomains(String userID, String devID){
+        return devices.get(Utils.fullID(userID, devID)).getDomains();
     }
 
     public void addDomainToDevice(String userID, String devID,

@@ -103,12 +103,12 @@ public class ServerThread extends Thread {
 
     private void getTemperatures() throws IOException, ClassNotFoundException {
         String domain = (String) in.readObject();
-        ServerResponse sResponse = manager.getTemperatures(this.userID,domain);
-        MessageCode res = sResponse.responseCode();
+        ServerResponse sr = manager.getTemperatures(this.userID,domain);
+        MessageCode res = sr.responseCode();
         out.writeObject(res);
         if(res==MessageCode.OK){
             // FileHelper.sendFile(sResponse.filePath(),out);
-            out.writeObject(sResponse); 
+            out.writeObject(sr); 
         }
     }
 

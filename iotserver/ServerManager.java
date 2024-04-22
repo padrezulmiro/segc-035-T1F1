@@ -4,7 +4,9 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 import iohelper.Utils;
 import iotclient.MessageCode;
@@ -137,6 +139,23 @@ public class ServerManager {
         }
     }
 
+    public ServerResponse getEncryptedDomainKeys(String userId, String devId ){
+        domStorage.readLock();
+        devStorage.readLock();
+        try {
+            Set<String> domains = devStorage.getDomains(userId, devId);
+            HashMap<String,String> encryptedDomainKeys = new HashMap<>();
+            for (String dom : domains){
+                String enDomkey = domStorage.getDeviceEncryptedDomainKey(devId, userId);
+                encryptedDomainKeys.put(dom, enDomkey);
+            }
+
+            return new ServerResponse(MessageCode.OK,encryptedDomainKeys);
+        } finally {
+            devStorage.readUnlock();
+            domStorage.readUnlock();
+        }
+    }
 
     public ServerResponse registerTemperature(float temperature, String userId,
             String devId) {
@@ -176,7 +195,6 @@ public class ServerManager {
             Map<String, Float> temps = domStorage.temperatures(domainName,
                     devStorage);
             String enDomkey = domStorage.getDeviceEncryptedDomainKey(domainName, user);
-            //XXX ServerResponse is being init with a Map?
             return new ServerResponse(MessageCode.OK, temps, enDomkey);
         } finally {
             devStorage.readUnlock();

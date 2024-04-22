@@ -4,12 +4,17 @@ import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.security.AlgorithmParameters;
 import java.security.InvalidKeyException;
+import java.security.Key;
 import java.security.KeyStore;
 import java.security.KeyStore.PrivateKeyEntry;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
+import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.SecureRandom;
 import java.security.cert.Certificate;
@@ -42,54 +47,69 @@ public class CipherHelper {
     //     return rd.nextInt(20);
     // }
 
-    private static SymmetricCipherParams getParams(String paramFilePath) throws IOException{
+    /**
+     * Attempt to read symmetric cipher key's parameters from file, given a domain name.
+     * If the domain didn't exist, it will generate params and populate the file.
+     * @param paramFilePath
+     * @param domainName
+     * @return
+     * @throws IOException
+     */
+    private static SymmetricCipherParams getParams(String paramFilePath, String domainName) throws IOException{
+        final char SP = ':';
+
         File paramFile = new File(paramFilePath);
-        BufferedReader output = FileHelper.createFileReader(paramFile);
-        String[] lines = (String[]) output.lines().toArray(String[]::new);
-        output.close();
-        if (lines.length>0){
-            byte[]salt = Base64.getDecoder().decode(lines[0]);
-            int iterations = Integer.parseInt(lines[1]);
-            return new SymmetricCipherParams(salt, iterations);
+        if (paramFile.createNewFile()){
+            // no salt
+            SymmetricCipherParams params = new SymmetricCipherParams(generateSalt());
+            BufferedWriter writer = FileHelper.createFileWriter(paramFile);
+            writer.write(domainName + SP + params.toString());
+            writer.close();
+            return params;
         }else{
-            return new SymmetricCipherParams(generateSalt());
+            // read salt
+            BufferedReader reader = new BufferedReader(new FileReader(paramFile));
+            String line = (String) reader.readLine();
+            reader.close();
+            String[] tokens = Utils.split(line, SP);
+            byte[]salt = Base64.getDecoder().decode(tokens[1]);
+            int iterations = Integer.parseInt(tokens[2]);
+            return new SymmetricCipherParams(salt, iterations);
         }
     }
+
+
+    // private static byte[] getParameters(String paramFilePath, String domainName) throws IOException{
+
+    //     File paramFile = new File(paramFilePath);
+    //     if(!paramFile.createNewFile()){
+    //         // param file already exist
+    //         BufferedReader reader = new BufferedReader(new FileReader(paramFile));
+    //         String line = (String) reader.readLine();
+    //         return Base64.getDecoder().decode(line);
+    //     }
+
+    //     // // If the params don't exist
+    //     // SymmetricCipherParams params = new SymmetricCipherParams(generateSalt());
+    //     // BufferedWriter writer = FileHelper.createFileWriter(paramFile);
+    //     // writer.write(domainName + SP + params.toString());
+    //     // writer.close();
+    //     return null;
+    // }
 
     /*
      * uses PBE with AES 128 bits
      */
-    public static SecretKey getKeyFromPwd(String pwd, String paramFilePath) 
+    public static SecretKey getSecretKeyFromPwd(String domainName, String pwd, String paramFilePath) 
                     throws NoSuchAlgorithmException, InvalidKeySpecException, IOException{
         SecretKeyFactory factory = SecretKeyFactory.getInstance("PBEWithHmacSHA256AndAES_128");
-        SymmetricCipherParams params = getParams(paramFilePath);
-        byte[] salt = getParams(paramFilePath).getSalt();
-        int iterations = params.getIteration();
+        // SymmetricCipherParams params = getParams(paramFilePath, domainName);
+        SymmetricCipherParams params = getParams(paramFilePath, domainName);
+        byte[] salt = params.getSalt();
+        int iterations = params.getIterations();
         KeySpec spec = new PBEKeySpec(pwd.toCharArray(), salt, iterations, 128);
-
-        File paramFile = new File(paramFilePath);
-        BufferedWriter output = FileHelper.createFileWriter(paramFile);
-        output.write(Base64.getEncoder().encodeToString(salt));
-        output.write(System.getProperty("line.separator"));
-        output.write(iterations);
-        // File f = FileHelper.receiveFile( paramFilePath, null);
-        
         SecretKey sKey = factory.generateSecret(spec);
         return sKey;
-    }
-
-    public static String encryptString(String algorithm, PublicKey key, String input)
-            throws InvalidKeyException, NoSuchAlgorithmException,
-            NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException{
-        byte[] encryptedData = encrypt(algorithm, key, Base64.getDecoder().decode(input));
-        return Base64.getEncoder().encodeToString(encryptedData);
-    }
-
-    public static String decryptString(String algorithm, PublicKey key, String cipherText)
-            throws InvalidKeyException, NoSuchAlgorithmException,
-            NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException{
-        byte[] PlainData = decrypt(algorithm, key, Base64.getDecoder().decode(cipherText));
-        return Base64.getEncoder().encodeToString(PlainData);
     }
 
     //PBEWithHmacSHA256AndAES_128
@@ -100,11 +120,12 @@ public class CipherHelper {
                        InvalidKeyException, IllegalBlockSizeException, BadPaddingException{
         Cipher c = Cipher.getInstance(algorithm);
         c.init(Cipher.ENCRYPT_MODE, key); // this line is fucked
+        c.getParameters();
         byte[] cipherData = c.doFinal(input);
         return cipherData;
     }
 
-    public static byte[] decrypt(String algorithm, PublicKey key, byte[] cipherData)
+    public static byte[] decrypt(String algorithm, PrivateKey key, byte[] cipherData)
                 throws NoSuchAlgorithmException, NoSuchPaddingException,
                        InvalidKeyException, IllegalBlockSizeException, BadPaddingException{
         Cipher c = Cipher.getInstance(algorithm);
@@ -113,15 +134,15 @@ public class CipherHelper {
         return plainText;
     }
 
-    public static void encryptAsym(PublicKey pK, PrivateKeyEntry pirK){}
-
-    
-    public static void decryptAsym(){}
-
-    // public static 
-
-    /*
+    /**
      * Load keystore from drive
+     * @param keystorePath
+     * @param keystorePwd
+     * @return
+     * @throws NoSuchAlgorithmException
+     * @throws CertificateException
+     * @throws IOException
+     * @throws KeyStoreException
      */
     public static KeyStore getKeyStore(String keystorePath, String keystorePwd)
                 throws NoSuchAlgorithmException, CertificateException,
@@ -131,6 +152,42 @@ public class CipherHelper {
         kstore.load(kfile, keystorePwd.toCharArray()); //this. is wrong?
         kfile.close();
         return kstore;
+    }
+
+    /**
+     * Unwrapping a key with a given private key, using RSA
+     * @param priKey
+     * @param wrappedKey
+     * @return
+     * @throws NoSuchAlgorithmException
+     * @throws NoSuchPaddingException
+     * @throws InvalidKeyException
+     */
+    public static Key unwrap(PrivateKey priKey, byte[] wrappedKey)
+        throws NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException{
+        Cipher c = Cipher.getInstance("RSA");
+        c.init(Cipher.UNWRAP_MODE, priKey);
+        return c.unwrap(wrappedKey, "PBEWithHmacSHA256AndAES_128", Cipher.SECRET_KEY);
+    }
+
+    /**
+     * Wrapping a key with a public key, using RSA
+     * @param pubKey
+     * @param sharedKey
+     * @return
+     * @throws NoSuchAlgorithmException
+     * @throws NoSuchPaddingException
+     * @throws InvalidKeyException
+     * @throws IllegalBlockSizeException
+     */
+    public static byte[] wrapSkey(PublicKey pubKey, Key sharedKey)
+        throws NoSuchAlgorithmException, NoSuchPaddingException,
+                    InvalidKeyException, IllegalBlockSizeException{
+        Cipher c = Cipher.getInstance("RSA");
+        c.init(Cipher.WRAP_MODE, pubKey);
+        // cifrar a chave secreta que queremos enviar
+        byte[] wrappedKey = c.wrap(sharedKey);
+        return wrappedKey;
     }
 
 }

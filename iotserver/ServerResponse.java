@@ -17,12 +17,18 @@ public class ServerResponse implements Serializable{
     private String filePath;
     private Map<String,Float> temperatures;
     private String encryptedDomainKey;
-    
+    private HashMap<String,String> allEncryptedDomainKeys;
+
     public ServerResponse(MessageCode code) {
         this.code = code;
         this.fileSize = -1;
         this.fileStream = null;
         this.temperatures = null;
+    }
+
+    public ServerResponse(MessageCode code, HashMap<String,String> enDomkeys) {
+        this.code = code;
+        this.allEncryptedDomainKeys = enDomkeys;
     }
 
     public ServerResponse(MessageCode code, String filePath, String enDomkey) {
@@ -68,4 +74,7 @@ public class ServerResponse implements Serializable{
         return encryptedDomainKey;
     }
 
+    public HashMap<String,String> allEncryptedDomainKeys() {
+        return allEncryptedDomainKeys;
+    }
 }
