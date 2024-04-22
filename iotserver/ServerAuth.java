@@ -7,7 +7,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.nio.ByteBuffer;
 import java.security.InvalidKeyException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -21,11 +20,11 @@ import java.util.concurrent.ThreadLocalRandom;
 public class ServerAuth {
     private static volatile ServerAuth INSTANCE;
 
-    private final String USER_FILEPATH = "user.txt";
-    private final String CLIENT_EXEC_PATH = "IoTDevice.jar";
+    private static final String USER_FILEPATH = "user.txt";
+    private static final String CLIENT_EXEC_PATH = "IoTDevice.jar";
+    private static String apiKey;
 
     private UserStorage userStorage;
-    private String apiKey;
 
     public static ServerAuth getInstance() {
         ServerAuth instance = INSTANCE;
@@ -41,31 +40,46 @@ public class ServerAuth {
         userStorage = new UserStorage(USER_FILEPATH);
     }
 
-    public void setApiKey(String key) {
-        apiKey = key;
-    }
-
-    public long generateNonce() {
-        return ThreadLocalRandom.current().nextLong();
-    }
-
     public boolean isUserRegistered(String user) {
-        return userStorage.isUserRegistered(user);
+        userStorage.readLock();
+        try {
+            return userStorage.isUserRegistered(user);
+        } finally {
+            userStorage.readUnlock();
+        }
     }
 
     public boolean registerUser(String user, String certPath) {
-        return userStorage.registerUser(user, certPath);
+        userStorage.writeLock();
+        try {
+            return userStorage.registerUser(user, certPath);
+        } finally {
+            userStorage.writeUnlock();
+        }
     }
 
     public String userCertPath(String user) {
-        return userStorage.userCertPath(user);
+        userStorage.readLock();
+        try {
+            return userStorage.userCertPath(user);
+        } finally {
+            userStorage.readUnlock();
+        }
     }
 
-    public int generate2FACode() {
+    public static long generateNonce() {
+        return ThreadLocalRandom.current().nextLong();
+    }
+
+    public static void setApiKey(String key) {
+        apiKey = key;
+    }
+
+    public static int generate2FACode() {
         return ThreadLocalRandom.current().nextInt(0, 100000);
     }
 
-    public int send2FAEmail(String emailAddress, int code) {
+    public static int send2FAEmail(String emailAddress, int code) {
         String codeStr = String.valueOf(code);
         String urlStr = String.format("https://lmpinto.eu.pythonanywhere.com" +
                 "/2FA?e=%s&c=%s&a=%s", emailAddress, codeStr, apiKey);
@@ -85,9 +99,13 @@ public class ServerAuth {
         return responseCode;
     }
 
-    public boolean verifySignedNonce(byte[] signedNonce, String user, long nonce)
-            throws FileNotFoundException, IOException, CertificateException,
-            NoSuchAlgorithmException, InvalidKeyException, SignatureException {
+    public static boolean verifySignedNonce(byte[] signedNonce, String user,
+            long nonce) throws FileNotFoundException,
+            IOException,
+            CertificateException,
+            NoSuchAlgorithmException,
+            InvalidKeyException,
+            SignatureException {
         Signature signature = Signature.getInstance("MD5withRSA");
         Certificate cert = null;
         try (InputStream in = new FileInputStream(Utils.certPathFromUser(user))) {
@@ -100,7 +118,7 @@ public class ServerAuth {
         return signature.verify(signedNonce);
     }
 
-    public boolean verifyAttestationHash(byte[] hash, long nonce)
+    public static boolean verifyAttestationHash(byte[] hash, long nonce)
             throws IOException, NoSuchAlgorithmException {
         final int CHUNK_SIZE = 1024;
 

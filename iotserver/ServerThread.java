@@ -108,7 +108,7 @@ public class ServerThread extends Thread {
         ServerAuth sa = IoTServer.SERVER_AUTH;
         userID = (String) in.readObject();
 
-        long nonce = sa.generateNonce();
+        long nonce = ServerAuth.generateNonce();
         out.writeLong(nonce);
 
         if (sa.isUserRegistered(userID)) {
@@ -119,8 +119,8 @@ public class ServerThread extends Thread {
             authUnregisteredUser(nonce);
         }
 
-        int twoFACode = sa.generate2FACode();
-        int emailResponseCode = sa.send2FAEmail(userID, twoFACode);
+        int twoFACode = ServerAuth.generate2FACode();
+        int emailResponseCode = ServerAuth.send2FAEmail(userID, twoFACode);
 
         int receivedTwoFACode = in.readInt();
         if (twoFACode == receivedTwoFACode) {
@@ -153,13 +153,11 @@ public class ServerThread extends Thread {
     // TODO(aZul) Replace attestClient with this func
     private void attestClientNew() throws ClassNotFoundException, IOException,
             NoSuchAlgorithmException {
-        ServerAuth sa = IoTServer.SERVER_AUTH;
-
-        long nonce = sa.generateNonce();
+        long nonce = ServerAuth.generateNonce();
         out.writeLong(nonce);
 
         byte[] receivedHash = (byte[]) in.readObject();
-        if (sa.verifyAttestationHash(receivedHash, nonce)) {
+        if (ServerAuth.verifyAttestationHash(receivedHash, nonce)) {
             out.writeObject(MessageCode.OK_TESTED);
         } else {
             manager.disconnectDevice(userID, deviceID);
@@ -250,7 +248,7 @@ public class ServerThread extends Thread {
         byte[] signedNonce = (byte[]) in.readObject();
         Certificate cert = (Certificate) in.readObject();
 
-        if (sa.verifySignedNonce(signedNonce, userID, nonce) &&
+        if (ServerAuth.verifySignedNonce(signedNonce, userID, nonce) &&
                 receivedUnsignedNonce == nonce) {
             sa.registerUser(userID, Utils.certPathFromUser(userID));
             out.writeObject(MessageCode.OK);
@@ -262,10 +260,8 @@ public class ServerThread extends Thread {
     private void authRegisteredUser(long nonce) throws ClassNotFoundException,
             IOException, InvalidKeyException, CertificateException,
             NoSuchAlgorithmException, SignatureException {
-        ServerAuth sa = IoTServer.SERVER_AUTH;
-
         byte[] signedNonce = (byte[]) in.readObject();
-        if (sa.verifySignedNonce(signedNonce, userID, nonce)) {
+        if (ServerAuth.verifySignedNonce(signedNonce, userID, nonce)) {
             out.writeObject(MessageCode.OK);
         } else {
             //FIXME Create a new message code type
