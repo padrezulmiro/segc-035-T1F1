@@ -243,7 +243,7 @@ public class ServerThread extends Thread {
         byte[] signedNonce = (byte[]) in.readObject();
         Certificate cert = (Certificate) in.readObject();
 
-        if (sa.verifySignedNonce(signedNonce, userID, nonce) &&
+        if (sa.verifySignedNonce(signedNonce, cert, nonce) &&
                 receivedUnsignedNonce == nonce) {
             sa.registerUser(userID, Utils.certPathFromUser(userID));
             out.writeObject(MessageCode.OK);

@@ -98,4 +98,11 @@ public class ServerAuth {
     }
 
     public void saveCertificateInFile() {}
+
+    public boolean verifySignedNonce(byte[] signedNonce, Certificate cert, long nonce) throws SignatureException, NoSuchAlgorithmException, InvalidKeyException {
+        Signature signature = Signature.getInstance("MD5withRSA");
+        signature.initVerify(cert);
+        signature.update(ByteBuffer.allocate(Long.BYTES).putLong(nonce).array());
+        return signature.verify(signedNonce);
+    }
 }
