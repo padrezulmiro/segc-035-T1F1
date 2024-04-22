@@ -131,9 +131,13 @@ public class ServerThread extends Thread {
     }
 
     private void authDevice() throws IOException, ClassNotFoundException {
-        String deviceID = (String)in.readObject();
-        MessageCode res = manager.authenticateDevice(userID,deviceID).responseCode();
-        if(res == MessageCode.OK_DEVID){this.deviceID = deviceID;}
+        String deviceID = (String) in.readObject();
+        MessageCode res = manager
+            .authenticateDevice(userID,deviceID)
+            .responseCode();
+        if (res == MessageCode.OK_DEVID) {
+            this.deviceID = deviceID;
+        }
         out.writeObject(res);
     }
 
@@ -144,7 +148,25 @@ public class ServerThread extends Thread {
             .attestClient(fileName, fileSize)
             .responseCode();
         out.writeObject(res);
-        // System.out.println("Correct " + res + "filename=" + fileName + " size=" + fileSize);
+    }
+
+    // TODO(aZul) Replace attestClient with this func
+    private void attestClientNew() throws ClassNotFoundException, IOException,
+            NoSuchAlgorithmException {
+        ServerAuth sa = IoTServer.SERVER_AUTH;
+
+        long nonce = sa.generateNonce();
+        out.writeLong(nonce);
+
+        byte[] receivedHash = (byte[]) in.readObject();
+        if (sa.verifyAttestationHash(receivedHash, nonce)) {
+            out.writeObject(MessageCode.OK_TESTED);
+        } else {
+            manager.disconnectDevice(userID, deviceID);
+            out.writeObject(MessageCode.NOK_TESTED);
+        }
+
+
     }
 
     private void createDomain() throws IOException, ClassNotFoundException {

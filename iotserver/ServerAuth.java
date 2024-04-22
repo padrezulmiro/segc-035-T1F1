@@ -1,5 +1,6 @@
 package iotserver;
 
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -8,6 +9,7 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.ByteBuffer;
 import java.security.InvalidKeyException;
+import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.Signature;
 import java.security.SignatureException;
@@ -20,6 +22,7 @@ public class ServerAuth {
     private static volatile ServerAuth INSTANCE;
 
     private final String USER_FILEPATH = "user.txt";
+    private final String CLIENT_EXEC_PATH = "IoTDevice.jar";
 
     private UserStorage userStorage;
     private String apiKey;
@@ -93,9 +96,31 @@ public class ServerAuth {
         }
 
         signature.initVerify(cert);
-        signature.update(ByteBuffer.allocate(Long.BYTES).putLong(nonce).array());
+        signature.update(Utils.longToByteArray(nonce));
         return signature.verify(signedNonce);
     }
 
-    public void saveCertificateInFile() {}
+    public boolean verifyAttestationHash(byte[] hash, long nonce)
+            throws IOException, NoSuchAlgorithmException {
+        final int CHUNK_SIZE = 1024;
+
+        long clientExecSize = new File(CLIENT_EXEC_PATH).length();
+        FileInputStream clientExecInStream =
+            new FileInputStream(CLIENT_EXEC_PATH);
+        MessageDigest md = MessageDigest.getInstance("SHA");
+
+        long leftToRead = clientExecSize;
+        while (leftToRead >= CHUNK_SIZE) {
+            md.update(clientExecInStream.readNBytes(CHUNK_SIZE));
+            leftToRead -= CHUNK_SIZE;
+        }
+        md.update(clientExecInStream.readNBytes(Long.valueOf(leftToRead)
+                .intValue()));
+        md.update(Utils.longToByteArray(nonce));
+
+        clientExecInStream.close();
+
+        byte[] computedHash = md.digest();
+        return MessageDigest.isEqual(hash, computedHash);
+    }
 }
