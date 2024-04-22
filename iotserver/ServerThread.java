@@ -4,6 +4,11 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
+import java.security.SignatureException;
+import java.security.cert.Certificate;
+import java.security.cert.CertificateException;
 
 import iotclient.MessageCode;
 import iohelper.FileHelper;
@@ -87,40 +92,77 @@ public class ServerThread extends Thread {
         isRunning = false;
     }
 
-    private void getImage() throws IOException, ClassNotFoundException {
-        String targetUser = (String)in.readObject();
-        String targetDev = (String)in.readObject();
-        ServerResponse sr = manager.getImage(this.userID,targetUser, targetDev);
-        MessageCode rCode=sr.responseCode();
-        // Send code to client
-        out.writeObject(rCode);
-        // Send file (if aplicable)
-        if( rCode == MessageCode.OK){
-            FileHelper.sendFile(sr.filePath(), out);
+    private void authUser() throws IOException, ClassNotFoundException {
+        if (this.userID==null){
+            this.userID = (String) in.readObject();
+        }
+
+        String pwd = (String) in.readObject();
+        out.writeObject(manager.authenticateUser(userID).responseCode());
+    }
+
+    //TODO Replace this with authUser(), create new message codes, handle bad email response code
+    private void authUserNew() throws ClassNotFoundException, IOException,
+            InvalidKeyException, CertificateException, NoSuchAlgorithmException,
+            SignatureException {
+        ServerAuth sa = IoTServer.SERVER_AUTH;
+        userID = (String) in.readObject();
+
+        long nonce = sa.generateNonce();
+        out.writeLong(nonce);
+
+        if (sa.isUserRegistered(userID)) {
+            out.writeObject(MessageCode.OK_USER);
+            authRegisteredUser(nonce);
+        } else {
+            out.writeObject(MessageCode.OK_NEW_USER);
+            authUnregisteredUser(nonce);
+        }
+
+        int twoFACode = sa.generate2FACode();
+        int emailResponseCode = sa.send2FAEmail(userID, twoFACode);
+
+        int receivedTwoFACode = in.readInt();
+        if (twoFACode == receivedTwoFACode) {
+            out.writeObject(MessageCode.OK);
+        } else {
+            out.writeObject(MessageCode.NOK);
         }
     }
 
-    private void getTemperatures() throws IOException, ClassNotFoundException {
-        String domain = (String) in.readObject();
-        ServerResponse sResponse = manager.getTemperatures(this.userID,domain);
-        MessageCode res = sResponse.responseCode();
+    private void authDevice() throws IOException, ClassNotFoundException {
+        String deviceID = (String)in.readObject();
+        MessageCode res = manager.authenticateDevice(userID,deviceID).responseCode();
+        if(res == MessageCode.OK_DEVID){this.deviceID = deviceID;}
         out.writeObject(res);
-        if(res==MessageCode.OK){
-            // FileHelper.sendFile(sResponse.filePath(),out);
-            out.writeObject(sResponse.temperatures());
-        }
     }
 
-    private void registerImage() throws IOException, ClassNotFoundException {
-        String filename = (String)in.readObject();
-        long fileSize = (long)in.readObject();
-        String fullImgPath = IMAGE_DIR_PATH + filename;
-
-        FileHelper.receiveFile(fileSize, fullImgPath, in);
-
+    private void attestClient() throws IOException, ClassNotFoundException {
+        String fileName = (String)in.readObject();
+        long fileSize = (long)in.readLong();
         MessageCode res = manager
-            .registerImage(filename, this.userID, this.deviceID)
+            .attestClient(fileName, fileSize)
             .responseCode();
+        out.writeObject(res);
+        // System.out.println("Correct " + res + "filename=" + fileName + " size=" + fileSize);
+    }
+
+    private void createDomain() throws IOException, ClassNotFoundException {
+        String domain = (String)in.readObject();
+        MessageCode res = manager.createDomain(userID,domain).responseCode();
+        out.writeObject(res);
+    }
+
+    private void addUserToDomain() throws IOException, ClassNotFoundException {
+        String newUser = (String)in.readObject();
+        String domain = (String)in.readObject();
+        MessageCode res = manager.addUserToDomain(userID, newUser, domain).responseCode();
+        out.writeObject(res);
+    }
+
+    private void registerDeviceInDomain() throws IOException, ClassNotFoundException {
+        String domain = (String)in.readObject();
+        MessageCode res = manager.registerDeviceInDomain(domain, this.userID, this.deviceID).responseCode();
         out.writeObject(res);
     }
 
@@ -142,47 +184,72 @@ public class ServerThread extends Thread {
         out.flush();
     }
 
-    private void registerDeviceInDomain() throws IOException, ClassNotFoundException {
-        String domain = (String)in.readObject();
-        MessageCode res = manager.registerDeviceInDomain(domain, this.userID, this.deviceID).responseCode();
-        out.writeObject(res);
-    }
+    private void registerImage() throws IOException, ClassNotFoundException {
+        String filename = (String)in.readObject();
+        long fileSize = (long)in.readObject();
+        String fullImgPath = IMAGE_DIR_PATH + filename;
 
-    private void addUserToDomain() throws IOException, ClassNotFoundException {
-        String newUser = (String)in.readObject();
-        String domain = (String)in.readObject();
-        MessageCode res = manager.addUserToDomain(userID, newUser, domain).responseCode();
-        out.writeObject(res);
-    }
+        FileHelper.receiveFile(fileSize, fullImgPath, in);
 
-    private void createDomain() throws IOException, ClassNotFoundException {
-        String domain = (String)in.readObject();
-        MessageCode res = manager.createDomain(userID,domain).responseCode();
-        out.writeObject(res);
-    }
-
-    private void attestClient() throws IOException, ClassNotFoundException {
-        String fileName = (String)in.readObject();
-        long fileSize = (long)in.readLong();
         MessageCode res = manager
-            .attestClient(fileName, fileSize)
+            .registerImage(filename, this.userID, this.deviceID)
             .responseCode();
         out.writeObject(res);
-        // System.out.println("Correct " + res + "filename=" + fileName + " size=" + fileSize);
     }
 
-    private void authDevice() throws IOException, ClassNotFoundException {
-        String deviceID = (String)in.readObject();
-        MessageCode res = manager.authenticateDevice(userID,deviceID).responseCode();
-        if(res == MessageCode.OK_DEVID){this.deviceID = deviceID;}
+    private void getTemperatures() throws IOException, ClassNotFoundException {
+        String domain = (String) in.readObject();
+        ServerResponse sResponse = manager.getTemperatures(this.userID,domain);
+        MessageCode res = sResponse.responseCode();
         out.writeObject(res);
+        if(res==MessageCode.OK){
+            // FileHelper.sendFile(sResponse.filePath(),out);
+            out.writeObject(sResponse.temperatures());
+        }
     }
 
-    private void authUser() throws IOException, ClassNotFoundException {
-        if (this.userID==null){
-            this.userID = (String) in.readObject();
+    private void getImage() throws IOException, ClassNotFoundException {
+        String targetUser = (String)in.readObject();
+        String targetDev = (String)in.readObject();
+        ServerResponse sr = manager.getImage(this.userID,targetUser, targetDev);
+        MessageCode rCode=sr.responseCode();
+        // Send code to client
+        out.writeObject(rCode);
+        // Send file (if aplicable)
+        if( rCode == MessageCode.OK){
+            FileHelper.sendFile(sr.filePath(), out);
         }
-        String pwd = (String) in.readObject();
-        out.writeObject(manager.authenticateUser(userID).responseCode());
+    }
+
+    private void authUnregisteredUser(long nonce) throws IOException,
+            ClassNotFoundException, InvalidKeyException, CertificateException,
+            NoSuchAlgorithmException, SignatureException {
+        ServerAuth sa = IoTServer.SERVER_AUTH;
+
+        long receivedUnsignedNonce = in.readLong();
+        byte[] signedNonce = (byte[]) in.readObject();
+        Certificate cert = (Certificate) in.readObject();
+
+        if (sa.verifySignedNonce(signedNonce, userID, nonce) &&
+                receivedUnsignedNonce == nonce) {
+            sa.registerUser(userID, Utils.certPathFromUser(userID));
+            out.writeObject(MessageCode.OK);
+        } else {
+            out.writeObject(MessageCode.WRONG_PWD);
+        }
+    }
+
+    private void authRegisteredUser(long nonce) throws ClassNotFoundException,
+            IOException, InvalidKeyException, CertificateException,
+            NoSuchAlgorithmException, SignatureException {
+        ServerAuth sa = IoTServer.SERVER_AUTH;
+
+        byte[] signedNonce = (byte[]) in.readObject();
+        if (sa.verifySignedNonce(signedNonce, userID, nonce)) {
+            out.writeObject(MessageCode.OK);
+        } else {
+            //FIXME Create a new message code type
+            out.writeObject(MessageCode.WRONG_PWD);
+        }
     }
 }
