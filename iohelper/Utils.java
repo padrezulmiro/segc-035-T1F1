@@ -1,4 +1,4 @@
-package iotserver;
+package iohelper;
 
 import java.io.File;
 import java.io.IOException;
@@ -43,5 +43,9 @@ public class Utils {
             System.out.println("File created: " + fileCreated.getName());
         }
         return fileCreated;
+    }
+
+    public static String certPathFromUser(String user) {
+        return "output/server/scerts/" + user + ".cert";
     }
 }

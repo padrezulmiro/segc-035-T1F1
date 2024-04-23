@@ -226,7 +226,7 @@ public class ServerManager {
 
         userStorage.writeLock();
         try {
-            userStorage.registerUser(user);
+            userStorage.registerUser(user, "");
             return new ServerResponse(MessageCode.OK_NEW_USER);
         } finally {
             userStorage.writeUnlock();
