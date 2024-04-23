@@ -6,15 +6,9 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.ObjectInputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.ByteBuffer;
-import java.security.InvalidKeyException;
-import java.io.IOException;
-import java.io.InputStream;
-import java.net.HttpURLConnection;
-import java.net.URL;
 import java.security.InvalidKeyException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -25,14 +19,8 @@ import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.util.concurrent.ThreadLocalRandom;
 import java.security.cert.CertificateEncodingException;
-import java.security.cert.CertificateException;
-import java.security.cert.CertificateFactory;
 import java.util.Base64;
-import java.util.concurrent.ThreadLocalRandom;
-
-import iohelper.FileHelper;
 import iohelper.Utils;
-
 
 public class ServerAuth {
     private static volatile ServerAuth INSTANCE;
@@ -45,10 +33,12 @@ public class ServerAuth {
 
     public static ServerAuth getInstance() {
         ServerAuth instance = INSTANCE;
-        if (instance != null) return instance;
+        if (instance != null)
+            return instance;
 
-        synchronized(ServerAuth.class) {
-            if (instance == null) instance = new ServerAuth();
+        synchronized (ServerAuth.class) {
+            if (instance == null)
+                instance = new ServerAuth();
             return instance;
         }
     }
@@ -56,7 +46,7 @@ public class ServerAuth {
     private ServerAuth() {
         userStorage = new UserStorage(USER_FILEPATH);
     }
-    
+
     public boolean isUserRegistered(String user) {
         userStorage.readLock();
         try {
@@ -154,8 +144,6 @@ public class ServerAuth {
         signature.initVerify(cert);
         signature.update(ByteBuffer.allocate(Long.BYTES).putLong(nonce).array());
         return signature.verify(signedNonce);
-        signature.update(Utils.longToByteArray(nonce));
-        return signature.verify(signedNonce);
     }
 
     public static boolean verifyAttestationHash(byte[] hash, long nonce)
@@ -163,8 +151,7 @@ public class ServerAuth {
         final int CHUNK_SIZE = 1024;
 
         long clientExecSize = new File(CLIENT_EXEC_PATH).length();
-        FileInputStream clientExecInStream =
-            new FileInputStream(CLIENT_EXEC_PATH);
+        FileInputStream clientExecInStream = new FileInputStream(CLIENT_EXEC_PATH);
         MessageDigest md = MessageDigest.getInstance("SHA");
 
         long leftToRead = clientExecSize;

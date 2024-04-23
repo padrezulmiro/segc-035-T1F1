@@ -87,12 +87,7 @@ public class IoTDevice {
 
         // Connection & Authentication
         if (connect(serverAddress)) {
-            // userAuth(userid, "");
             twoFactorAuth(userid);
-            // deviceAuth(devid);nesta 2ª fase, o dev-id já não é verificado durante o
-            // processo de autenticação,
-            // mas será verificado durante o processo de atestação remota (Secção 4.3).
-            // testDevice();
             remoteAttestation(devid);
             printMenu();
             // Program doesn't end until CTRL+C is pressed

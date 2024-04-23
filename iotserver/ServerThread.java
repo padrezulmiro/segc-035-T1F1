@@ -105,17 +105,6 @@ public class ServerThread extends Thread {
         isRunning = false;
     }
 
-    /*
-     * private void authUser() throws IOException, ClassNotFoundException {
-     * if (this.userID==null){
-     * this.userID = (String) in.readObject();
-     * }
-     * 
-     * String pwd = (String) in.readObject();
-     * out.writeObject(manager.authenticateUser(userID).responseCode());
-     * }
-     */
-
     private void authUser() throws ClassNotFoundException, IOException,
             InvalidKeyException, CertificateException, NoSuchAlgorithmException,
             SignatureException {
@@ -222,10 +211,6 @@ public class ServerThread extends Thread {
                 .registerImage(filename, this.userID, this.deviceID)
                 .responseCode();
         out.writeObject(res);
-        if (res == MessageCode.OK) {
-            // FileHelper.sendFile(sResponse.filePath(),out);
-            out.writeObject(sResponse.temperatures());
-        }
     }
 
     private void getTemperatures() throws IOException, ClassNotFoundException {
