@@ -11,10 +11,19 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.ByteBuffer;
 import java.security.InvalidKeyException;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.security.InvalidKeyException;
+import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.Signature;
 import java.security.SignatureException;
 import java.security.cert.Certificate;
+import java.security.cert.CertificateException;
+import java.security.cert.CertificateFactory;
+import java.util.concurrent.ThreadLocalRandom;
 import java.security.cert.CertificateEncodingException;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
@@ -24,22 +33,22 @@ import java.util.concurrent.ThreadLocalRandom;
 import iohelper.FileHelper;
 import iohelper.Utils;
 
+
 public class ServerAuth {
     private static volatile ServerAuth INSTANCE;
 
-    private final String USER_FILEPATH = "user.txt";
+    private static final String USER_FILEPATH = "user.txt";
+    private static final String CLIENT_EXEC_PATH = "IoTDevice.jar";
+    private static String apiKey;
 
     private UserStorage userStorage;
-    private String apiKey;
 
     public static ServerAuth getInstance() {
         ServerAuth instance = INSTANCE;
-        if (instance != null)
-            return instance;
+        if (instance != null) return instance;
 
-        synchronized (ServerAuth.class) {
-            if (instance == null)
-                instance = new ServerAuth();
+        synchronized(ServerAuth.class) {
+            if (instance == null) instance = new ServerAuth();
             return instance;
         }
     }
@@ -47,32 +56,47 @@ public class ServerAuth {
     private ServerAuth() {
         userStorage = new UserStorage(USER_FILEPATH);
     }
-
-    public void setApiKey(String key) {
-        apiKey = key;
-    }
-
-    public long generateNonce() {
-        return ThreadLocalRandom.current().nextLong();
-    }
-
+    
     public boolean isUserRegistered(String user) {
-        return userStorage.isUserRegistered(user);
+        userStorage.readLock();
+        try {
+            return userStorage.isUserRegistered(user);
+        } finally {
+            userStorage.readUnlock();
+        }
     }
 
     public boolean registerUser(String user, String certPath) {
-        return userStorage.registerUser(user, certPath);
+        userStorage.writeLock();
+        try {
+            return userStorage.registerUser(user, certPath);
+        } finally {
+            userStorage.writeUnlock();
+        }
     }
 
     public String userCertPath(String user) {
-        return userStorage.userCertPath(user);
+        userStorage.readLock();
+        try {
+            return userStorage.userCertPath(user);
+        } finally {
+            userStorage.readUnlock();
+        }
     }
 
-    public int generate2FACode() {
+    public static long generateNonce() {
+        return ThreadLocalRandom.current().nextLong();
+    }
+
+    public static void setApiKey(String key) {
+        apiKey = key;
+    }
+
+    public static int generate2FACode() {
         return ThreadLocalRandom.current().nextInt(0, 100000);
     }
 
-    public int send2FAEmail(String emailAddress, int code) {
+    public static int send2FAEmail(String emailAddress, int code) {
         String codeStr = String.valueOf(code);
         String urlStr = String.format("https://lmpinto.eu.pythonanywhere.com" +
                 "/2FA?e=%s&c=%s&a=%s", emailAddress, codeStr, apiKey);
@@ -130,5 +154,31 @@ public class ServerAuth {
         signature.initVerify(cert);
         signature.update(ByteBuffer.allocate(Long.BYTES).putLong(nonce).array());
         return signature.verify(signedNonce);
+        signature.update(Utils.longToByteArray(nonce));
+        return signature.verify(signedNonce);
+    }
+
+    public static boolean verifyAttestationHash(byte[] hash, long nonce)
+            throws IOException, NoSuchAlgorithmException {
+        final int CHUNK_SIZE = 1024;
+
+        long clientExecSize = new File(CLIENT_EXEC_PATH).length();
+        FileInputStream clientExecInStream =
+            new FileInputStream(CLIENT_EXEC_PATH);
+        MessageDigest md = MessageDigest.getInstance("SHA");
+
+        long leftToRead = clientExecSize;
+        while (leftToRead >= CHUNK_SIZE) {
+            md.update(clientExecInStream.readNBytes(CHUNK_SIZE));
+            leftToRead -= CHUNK_SIZE;
+        }
+        md.update(clientExecInStream.readNBytes(Long.valueOf(leftToRead)
+                .intValue()));
+        md.update(Utils.longToByteArray(nonce));
+
+        clientExecInStream.close();
+
+        byte[] computedHash = md.digest();
+        return MessageDigest.isEqual(hash, computedHash);
     }
 }

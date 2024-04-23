@@ -160,15 +160,18 @@ public class ServerThread extends Thread {
         out.writeObject(res);
     }
 
-    private void attestClient() throws IOException, ClassNotFoundException {
-        String fileName = (String) in.readObject();
-        long fileSize = (long) in.readLong();
-        MessageCode res = manager
-                .attestClient(fileName, fileSize)
-                .responseCode();
-        out.writeObject(res);
-        // System.out.println("Correct " + res + "filename=" + fileName + " size=" +
-        // fileSize);
+    private void attestClient() throws ClassNotFoundException, IOException,
+            NoSuchAlgorithmException {
+        long nonce = ServerAuth.generateNonce();
+        out.writeLong(nonce);
+
+        byte[] receivedHash = (byte[]) in.readObject();
+        if (ServerAuth.verifyAttestationHash(receivedHash, nonce)) {
+            out.writeObject(MessageCode.OK_TESTED);
+        } else {
+            manager.disconnectDevice(userID, deviceID);
+            out.writeObject(MessageCode.NOK_TESTED);
+        }
     }
 
     private void createDomain() throws IOException, ClassNotFoundException {
@@ -219,6 +222,10 @@ public class ServerThread extends Thread {
                 .registerImage(filename, this.userID, this.deviceID)
                 .responseCode();
         out.writeObject(res);
+        if (res == MessageCode.OK) {
+            // FileHelper.sendFile(sResponse.filePath(),out);
+            out.writeObject(sResponse.temperatures());
+        }
     }
 
     private void getTemperatures() throws IOException, ClassNotFoundException {
