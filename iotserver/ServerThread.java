@@ -256,6 +256,7 @@ public class ServerThread extends Thread {
         if (sa.verifySignedNonce(signedNonce, cert, nonce) &&
                 receivedUnsignedNonce == nonce) {
             sa.registerUser(userID, Utils.certPathFromUser(userID));
+            sa.saveCertificateInFile(userID, cert);
             out.writeObject(MessageCode.OK);
         } else {
             out.writeObject(MessageCode.WRONG_NONCE);
