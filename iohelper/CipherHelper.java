@@ -117,13 +117,13 @@ public class CipherHelper {
     }
 
 
-    public static void encryptFileAES_ECB(SecretKey key, File inputFile, File outputFile)
+    public static void handleFileAES_ECB(int opmode, SecretKey key, File inputFile, File outputFile)
         throws IOException, NoSuchPaddingException, NoSuchAlgorithmException,
                 InvalidAlgorithmParameterException, InvalidKeyException, 
                 BadPaddingException, IllegalBlockSizeException {
     
         Cipher c = Cipher.getInstance("AES/ECB/PKCS5Padding");
-        c.init(Cipher.ENCRYPT_MODE, key);
+        c.init(opmode, key);
 
         FileInputStream in = new FileInputStream(inputFile);
         FileOutputStream out = new FileOutputStream(outputFile);

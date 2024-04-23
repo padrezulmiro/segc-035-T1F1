@@ -223,8 +223,16 @@ public class IoTDevice {
     /**
      * 
      * @param device
+     * @throws NoSuchPaddingException 
+     * @throws NoSuchAlgorithmException 
+     * @throws InvalidKeyException 
+     * @throws IllegalBlockSizeException 
+     * @throws BadPaddingException 
+     * @throws InvalidAlgorithmParameterException 
      */
-    private static void receiveImage(String device) {
+    private static void receiveImage(String device)
+        throws InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException,
+                InvalidAlgorithmParameterException, BadPaddingException, IllegalBlockSizeException {
         try {
             out.writeObject(MessageCode.RI); // Send opcode
             String[] dev = device.split(":");
@@ -238,11 +246,18 @@ public class IoTDevice {
                     // String s = (String) in.readObject(); // This is discarded
                     // long fileSize = (long) in.readObject(); // Read file size
                     // String[] dev = device.split(":");
-                    String fileName = baseDir + dev[0] + "_" + dev[1] + ".jpg";
-                    File f = new File(fileName);
-                    FileHelper.receiveFile(f, in);
+                    String enFilePath = baseDir + "en_" + dev[0] + "_" + dev[1] + ".jpg";
+                    File encryptedFile = new File(enFilePath);
+                    FileHelper.receiveFile(encryptedFile, in);
+                    String plainFilePath = baseDir + dev[0] + "_" + dev[1] + ".jpg";
+                    File plainFile = new File(plainFilePath);
 
-                    System.out.println(MessageCode.OK.getDesc() + ", " + f.length() + " (long)"); // TODO
+                    // getting secret key, using it to decrypt
+                    SecretKey skey = (SecretKey) CipherHelper.unwrap(privateKey, enDomkey.getBytes());
+                    CipherHelper.handleFileAES_ECB(Cipher.DECRYPT_MODE, skey, encryptedFile, plainFile);
+                    encryptedFile.delete();
+
+                    System.out.println(MessageCode.OK.getDesc() + ", " + plainFile.length() + " (long)"); // TODO
                     break;
                 case NODATA:
                     System.out.println(MessageCode.NODATA.getDesc());
@@ -262,7 +277,9 @@ public class IoTDevice {
         }
     }
 
-    private static void receiveTemps(String domain) {
+    private static void receiveTemps(String domain)
+        throws InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException,
+               IllegalBlockSizeException, BadPaddingException {
         try {
             out.writeObject(MessageCode.RT); // Send opcode
             out.writeObject(domain);
@@ -271,19 +288,28 @@ public class IoTDevice {
             switch (code) {
                 case OK:
                     // Long fileSize = (long) in.readObject(); // Read file size
-                    @SuppressWarnings("unchecked")
                     ServerResponse sResponse = (ServerResponse) in.readObject();
+
                     String enDomkey = sResponse.encryptedDomainKey();
-                    HashMap<String, String> temps = (HashMap<String, String>) sResponse.temperatures();
+                    SecretKey sKey = (SecretKey) CipherHelper.unwrap(privateKey, enDomkey.getBytes());
+
+
+                    HashMap<String, String> enTemps = (HashMap<String, String>) sResponse.temperatures();
                     for (@SuppressWarnings("unused")
-                    String s : temps.keySet())
+                    String s : enTemps.keySet())
                         ;
                     for (@SuppressWarnings("unused")
-                    String n : temps.values())
+                    String n : enTemps.values())
                         ;
                     // reason for the empty loops: https://stackoverflow.com/a/509288
                     // essentially ClassCastException will be thrown if any of the maps is bad
 
+                    HashMap<String, String> temps =  new HashMap<String, String>();
+                    for (String dev : enTemps.keySet()){
+                        String enTemp = enTemps.get(dev);
+                        String temp = new String(CipherHelper.decryptAES_ECB(sKey, enTemp.getBytes()));
+                        temps.put(dev, temp);
+                    }
                     // TODO: write it to file
                     File f = new File((baseDir + "temps_" + domain + ".txt"));
                     BufferedWriter output = FileHelper.createFileWriter(f);
@@ -333,10 +359,10 @@ public class IoTDevice {
 
                 // encrypt file with secret key
                 File plainFile = new File(imagePath);
-                String enFileName = plainFile.getParent() + "en_" + plainFile.getName();
-                File encryptedFile = new File(enFileName);
+                String enFilePath = plainFile.getParent() + "en_" + plainFile.getName();
+                File encryptedFile = new File(enFilePath);
                 // encrypt the image, this file is the one sent
-                CipherHelper.encryptFileAES_ECB(sKey, plainFile, encryptedFile);
+                CipherHelper.handleFileAES_ECB(Cipher.ENCRYPT_MODE,sKey, plainFile, encryptedFile);
                 FileHelper.sendFile(encryptedFile, out); 
                 encryptedFile.delete();
 

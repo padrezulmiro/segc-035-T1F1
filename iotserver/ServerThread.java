@@ -88,6 +88,7 @@ public class ServerThread extends Thread {
         isRunning = false;
     }
 
+    
     private void getImage() throws IOException, ClassNotFoundException {
         String targetUser = (String)in.readObject();
         String targetDev = (String)in.readObject();
