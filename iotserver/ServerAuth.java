@@ -1,9 +1,12 @@
 package iotserver;
 
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.ObjectInputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.ByteBuffer;
@@ -12,9 +15,14 @@ import java.security.NoSuchAlgorithmException;
 import java.security.Signature;
 import java.security.SignatureException;
 import java.security.cert.Certificate;
+import java.security.cert.CertificateEncodingException;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
+import java.util.Base64;
 import java.util.concurrent.ThreadLocalRandom;
+
+import iohelper.FileHelper;
+import iohelper.Utils;
 
 public class ServerAuth {
     private static volatile ServerAuth INSTANCE;
@@ -26,10 +34,12 @@ public class ServerAuth {
 
     public static ServerAuth getInstance() {
         ServerAuth instance = INSTANCE;
-        if (instance != null) return instance;
+        if (instance != null)
+            return instance;
 
-        synchronized(ServerAuth.class) {
-            if (instance == null) instance = new ServerAuth();
+        synchronized (ServerAuth.class) {
+            if (instance == null)
+                instance = new ServerAuth();
             return instance;
         }
     }
@@ -97,9 +107,25 @@ public class ServerAuth {
         return signature.verify(signedNonce);
     }
 
-    public void saveCertificateInFile() {}
+    public void saveCertificateInFile(String user, Certificate cert) {
+        try {
+            Utils.initializeFile(Utils.certPathFromUser(user));
+            FileOutputStream os = new FileOutputStream(Utils.certPathFromUser(user));
+            os.write("-----BEGIN CERTIFICATE-----\n".getBytes("US-ASCII"));
+            os.write(Base64.getEncoder().encode(cert.getEncoded()));
+            os.write("-----END CERTIFICATE-----\n".getBytes("US-ASCII"));
+            os.close();
+        } catch (IOException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        } catch (CertificateEncodingException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+    }
 
-    public boolean verifySignedNonce(byte[] signedNonce, Certificate cert, long nonce) throws SignatureException, NoSuchAlgorithmException, InvalidKeyException {
+    public boolean verifySignedNonce(byte[] signedNonce, Certificate cert, long nonce)
+            throws SignatureException, NoSuchAlgorithmException, InvalidKeyException {
         Signature signature = Signature.getInstance("MD5withRSA");
         signature.initVerify(cert);
         signature.update(ByteBuffer.allocate(Long.BYTES).putLong(nonce).array());

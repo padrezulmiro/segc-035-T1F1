@@ -305,6 +305,7 @@ public class IoTDevice {
                 if (clientSocket != null) {
                     clientSocket.close();
                 }
+                sc.close();
             } catch (IOException e) {
                 // TODO Auto-generated catch block
                 e.printStackTrace();
@@ -666,7 +667,7 @@ public class IoTDevice {
                 + " do domínio <dm>, desde que o utilizador tenha permissões.");
         System.out.println("RI <user-id>:<dev_id> # Receber o ficheiro Imagem do dispositivo "
                 + "<user-id>:<dev_id> do servidor, desde que o utilizador tenha permissões.");
-        System.out.println("HELP # Monstrar este menu.");
+        System.out.println("HELP # Mostrar este menu.");
 
     }
 

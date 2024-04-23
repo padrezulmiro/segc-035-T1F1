@@ -1,4 +1,4 @@
-package iotserver;
+package iohelper;
 
 import java.io.File;
 import java.io.IOException;
@@ -46,6 +46,6 @@ public class Utils {
     }
 
     public static String certPathFromUser(String user) {
-        return "scerts/" + user + ".cert";
+        return "output/server/scerts/" + user + ".cert";
     }
 }

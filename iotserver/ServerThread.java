@@ -12,6 +12,7 @@ import java.security.cert.CertificateException;
 
 import iotclient.MessageCode;
 import iohelper.FileHelper;
+import iohelper.Utils;
 
 public class ServerThread extends Thread {
     private static final String IMAGE_DIR_PATH = "./output/server/img/";
@@ -256,6 +257,7 @@ public class ServerThread extends Thread {
         if (sa.verifySignedNonce(signedNonce, cert, nonce) &&
                 receivedUnsignedNonce == nonce) {
             sa.registerUser(userID, Utils.certPathFromUser(userID));
+            sa.saveCertificateInFile(userID, cert);
             out.writeObject(MessageCode.OK);
         } else {
             out.writeObject(MessageCode.WRONG_NONCE);
