@@ -112,6 +112,13 @@ public class ServerThread extends Thread {
         }
     }
 
+    private void getEncryptedDomainKeys() throws IOException, ClassNotFoundException {
+        String userID = (String) in.readObject();
+        String devID = (String) in.readObject();
+        ServerResponse sr = manager.getEncryptedDomainKeys(userID,devID);
+        out.writeObject(sr); 
+    }
+
     private void registerImage(String devUID, String devDID)
                 throws IOException, ClassNotFoundException {
         String filename = devUID + "_" + devDID + ".jpg"; //(String)in.readObject(); // screw this
@@ -127,6 +134,10 @@ public class ServerThread extends Thread {
     }
 
     private void registerTemperature() throws IOException, ClassNotFoundException {
+        getEncryptedDomainKeys();
+
+        // String domStr = (String) in.readObjklnklect();
+        // TODO: send it to each domain 
         String tempStr = (String) in.readObject();
         float temperature;
         try {

@@ -139,24 +139,6 @@ public class ServerManager {
         }
     }
 
-    public ServerResponse getEncryptedDomainKeys(String userId, String devId ){
-        domStorage.readLock();
-        devStorage.readLock();
-        try {
-            Set<String> domains = devStorage.getDomains(userId, devId);
-            HashMap<String,String> encryptedDomainKeys = new HashMap<>();
-            for (String dom : domains){
-                String enDomkey = domStorage.getDeviceEncryptedDomainKey(devId, userId);
-                encryptedDomainKeys.put(dom, enDomkey);
-            }
-
-            return new ServerResponse(MessageCode.OK,encryptedDomainKeys);
-        } finally {
-            devStorage.readUnlock();
-            domStorage.readUnlock();
-        }
-    }
-
     public ServerResponse registerTemperature(float temperature, String userId,
             String devId) {
         devStorage.writeLock();
@@ -223,6 +205,24 @@ public class ServerManager {
             }
 
             return new ServerResponse(MessageCode.NOPERM);
+        } finally {
+            devStorage.readUnlock();
+            domStorage.readUnlock();
+        }
+    }
+
+    public ServerResponse getEncryptedDomainKeys(String userId, String devId ){
+        domStorage.readLock();
+        devStorage.readLock();
+        try {
+            Set<String> domains = devStorage.getDomains(userId, devId);
+            HashMap<String,String> encryptedDomainKeys = new HashMap<>();
+            for (String dom : domains){
+                String enDomkey = domStorage.getDeviceEncryptedDomainKey(dom, userId);
+                encryptedDomainKeys.put(dom, enDomkey);
+            }
+
+            return new ServerResponse(MessageCode.OK,encryptedDomainKeys);
         } finally {
             devStorage.readUnlock();
             domStorage.readUnlock();

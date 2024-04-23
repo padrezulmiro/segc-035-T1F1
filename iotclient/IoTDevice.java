@@ -15,6 +15,7 @@ import java.security.InvalidKeyException;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
+import java.security.Key;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.UnrecoverableKeyException;
@@ -27,6 +28,7 @@ import java.util.Map;
 import java.util.Scanner;
 
 import javax.crypto.BadPaddingException;
+import javax.crypto.Cipher;
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
@@ -343,37 +345,39 @@ public class IoTDevice {
         try {
             out.writeObject(MessageCode.ET); // Send opcode
 
-            // send opcode for domainkeys request
-            out.writeObject(MessageCode.RDK); 
+            out.writeObject(userid);
+            out.writeObject(devid);
             // read a ServerResponse for confirmation + domkeys
             ServerResponse sr = (ServerResponse)in.readObject();
             if(sr.responseCode()!=MessageCode.OK){return;}
             HashMap<String,String> enDomkeysMap = sr.allEncryptedDomainKeys();
+
+            
             // for every domkey: unwrap with privatekey, encrypt temp with domain key, and then send
             for (String dom : enDomkeysMap.keySet()){
+                // getting encrypted dom keys
                 String enDomkey = enDomkeysMap.get(dom);
                 byte[] wrappedKey = Base64.getDecoder().decode(enDomkey);
                 SecretKey sKey = (SecretKey) CipherHelper.unwrap(privateKey, wrappedKey);
-                // CipherHelper.encrypt(temp, null, wrappedKey)
                 // use sKey to encrypt temp
+                byte[] encryptedTemp = CipherHelper.encryptAES_ECB(sKey, temp.getBytes());
+                out.writeObject(dom);                
+                out.writeObject(new String (encryptedTemp));
+
+                // receive message
+                MessageCode code = (MessageCode) in.readObject();
+                switch (code) {
+                    case OK:
+                        System.out.println(MessageCode.OK.getDesc());
+                        break;
+                    case NOK:
+                        System.out.println(MessageCode.NOK.getDesc());
+                        break;
+                    default:
+                        break;
+                }
             }
             
-            //
-            // String enTemp = CipherHelper.decryptString("RSA",privateKey, temp);
-            
-            out.writeObject(temp); // Send user
-            // Receive message
-            MessageCode code = (MessageCode) in.readObject();
-            switch (code) {
-                case OK:
-                    System.out.println(MessageCode.OK.getDesc());
-                    break;
-                case NOK:
-                    System.out.println(MessageCode.NOK.getDesc());
-                    break;
-                default:
-                    break;
-            }
         } catch (IOException | ClassNotFoundException e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
@@ -433,7 +437,7 @@ public class IoTDevice {
         PublicKey pk = newUserCert.getPublicKey();
         // generate domkey with dompwd
         String domkeyLocation = domkeyParamPath + domain + ".txt";
-        SecretKey skey = CipherHelper.getSecretKeyFromPwd(domain, domPwd,domkeyLocation);
+        SecretKey skey = CipherHelper.getSecretKeyFromPwd(domain,domPwd,domkeyLocation);
         // encrypt domkey with pk of the new user
         byte[] enDomkey = CipherHelper.wrapSkey(pk,skey);
 

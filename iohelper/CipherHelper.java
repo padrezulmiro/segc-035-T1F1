@@ -102,43 +102,62 @@ public class CipherHelper {
      */
     public static SecretKey getSecretKeyFromPwd(String domainName, String pwd, String paramFilePath) 
                     throws NoSuchAlgorithmException, InvalidKeySpecException, IOException{
-        SecretKeyFactory factory = SecretKeyFactory.getInstance("PBEWithHmacSHA256AndAES_128");
+        SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
         // SymmetricCipherParams params = getParams(paramFilePath, domainName);
         SymmetricCipherParams params = getParams(paramFilePath, domainName);
         byte[] salt = params.getSalt();
         int iterations = params.getIterations();
         KeySpec spec = new PBEKeySpec(pwd.toCharArray(), salt, iterations, 128);
-        SecretKey sKey = factory.generateSecret(spec);
+        // SecretKey sKey = factory.generateSecret(spec);
+        SecretKey sKey = new SecretKeySpec(factory.generateSecret(spec).getEncoded(), "AES");
         return sKey;
     }
 
-    //PBEWithHmacSHA256AndAES_128
-    // TODO: figure out what type of data will be en/decrypted
-    // Be mindful of buffering when using 
-    public static byte[] encrypt(String algorithm, PublicKey key, byte[] input) 
+    
+
+    /**
+     * Encrypting data to be sent to server
+     * @param key secret key of the domain it is sending to
+     * @param plainData data to be sent, represented in a byte array
+     * @return encrypted data in a byte array
+     * @throws NoSuchAlgorithmException
+     * @throws NoSuchPaddingException
+     * @throws InvalidKeyException
+     * @throws IllegalBlockSizeException
+     * @throws BadPaddingException
+     */
+    public static byte[] encryptAES_ECB(SecretKey key, byte[] plainData) 
                 throws NoSuchAlgorithmException, NoSuchPaddingException,
                        InvalidKeyException, IllegalBlockSizeException, BadPaddingException{
-        Cipher c = Cipher.getInstance(algorithm);
-        c.init(Cipher.ENCRYPT_MODE, key); // this line is fucked
-        c.getParameters();
-        byte[] cipherData = c.doFinal(input);
-        return cipherData;
+        Cipher c = Cipher.getInstance("AES/ECB/PKCS5Padding");
+        c.init(Cipher.ENCRYPT_MODE, key);
+        return c.doFinal(plainData);
     }
 
-    public static byte[] decrypt(String algorithm, PrivateKey key, byte[] cipherData)
+    /**
+     * Decrypting data sent from the server to be used
+     * @param key secret key of the domain data was from
+     * @param cipherData encrypted data to be decrypted and use
+     * @return decrypted plain data in a byte array
+     * @throws NoSuchAlgorithmException
+     * @throws NoSuchPaddingException
+     * @throws InvalidKeyException
+     * @throws IllegalBlockSizeException
+     * @throws BadPaddingException
+     */
+    public static byte[] decryptAES_ECB(SecretKey key, byte[] cipherData)
                 throws NoSuchAlgorithmException, NoSuchPaddingException,
                        InvalidKeyException, IllegalBlockSizeException, BadPaddingException{
-        Cipher c = Cipher.getInstance(algorithm);
+        Cipher c = Cipher.getInstance("AES/ECB/PKCS5Padding");
         c.init(Cipher.DECRYPT_MODE, key);
-        byte[] plainText = c.doFinal(cipherData);
-        return plainText;
+        return c.doFinal(cipherData);
     }
 
     /**
      * Load keystore from drive
-     * @param keystorePath
-     * @param keystorePwd
-     * @return
+     * @param keystorePath the path for the keystore
+     * @param keystorePwd password used for the keystore
+     * @return KeyStore object
      * @throws NoSuchAlgorithmException
      * @throws CertificateException
      * @throws IOException
@@ -156,9 +175,9 @@ public class CipherHelper {
 
     /**
      * Unwrapping a key with a given private key, using RSA
-     * @param priKey
-     * @param wrappedKey
-     * @return
+     * @param priKey private key of the user
+     * @param wrappedKey a wrapped key to be unwrapped
+     * @return secret key object
      * @throws NoSuchAlgorithmException
      * @throws NoSuchPaddingException
      * @throws InvalidKeyException
@@ -167,14 +186,14 @@ public class CipherHelper {
         throws NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException{
         Cipher c = Cipher.getInstance("RSA");
         c.init(Cipher.UNWRAP_MODE, priKey);
-        return c.unwrap(wrappedKey, "PBEWithHmacSHA256AndAES_128", Cipher.SECRET_KEY);
+        return c.unwrap(wrappedKey, "PBKDF2WithHmacSHA256", Cipher.SECRET_KEY);
     }
 
     /**
      * Wrapping a key with a public key, using RSA
-     * @param pubKey
-     * @param sharedKey
-     * @return
+     * @param pubKey public key of the user
+     * @param sharedKey secret key to be wrapped
+     * @return wrapped key as a byte array
      * @throws NoSuchAlgorithmException
      * @throws NoSuchPaddingException
      * @throws InvalidKeyException
