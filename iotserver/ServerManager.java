@@ -29,8 +29,8 @@ public class ServerManager {
     private static final String clientFileName = "IoTDevice.jar";
 
     private ServerManager(){
-        domStorage = new DomainStorage(domainFilePath);
         devStorage = new DeviceStorage(deviceFilePath);
+        domStorage = new DomainStorage(domainFilePath,devStorage);
         userStorage = new UserStorage(userFilePath);
 
         new File(imageDirectoryPath).mkdirs();
@@ -139,11 +139,11 @@ public class ServerManager {
         }
     }
 
-    public ServerResponse registerTemperature(float temperature, String userId,
-            String devId) {
+    public ServerResponse registerTemperature(String temperature, String userId,
+            String devId, String domainName) {
         devStorage.writeLock();
         try {
-            devStorage.saveDeviceTemperature(userId, devId, temperature);
+            devStorage.saveDeviceTemperature(userId, devId, temperature, domainName);
             return new ServerResponse(MessageCode.OK);
         } finally {
             devStorage.writeUnlock();
@@ -151,10 +151,10 @@ public class ServerManager {
     }
 
     public ServerResponse registerImage(String filename, String userId,
-            String devId) {
+            String devId, String domainName) {
         devStorage.writeLock();
         try {
-            devStorage.saveDeviceImage(userId, devId, filename);
+            devStorage.saveDeviceImage(userId, devId, filename,domainName);
             return new ServerResponse(MessageCode.OK);
         } finally {
             devStorage.writeUnlock();
@@ -174,7 +174,7 @@ public class ServerManager {
                 return new ServerResponse(MessageCode.NOPERM);
             }
 
-            Map<String, Float> temps = domStorage.temperatures(domainName,
+            Map<String, String> temps = domStorage.temperatures(domainName,
                     devStorage);
             String enDomkey = domStorage.getDeviceEncryptedDomainKey(domainName, user);
             return new ServerResponse(MessageCode.OK, temps, enDomkey);
@@ -192,14 +192,12 @@ public class ServerManager {
             if (!devStorage.deviceExists(targetUID, targetDID)) {
                 return new ServerResponse(MessageCode.NOID);
             }
-
-            String filepath = devStorage.getDeviceImage(targetUID, targetDID);
-            if (filepath == null) {
-                return new ServerResponse(MessageCode.NODATA);
-            }
-
             String domainName = domStorage.hasAccessToDeviceIn(requesterUID, targetUID, targetDID);
             if (domainName!=null) {
+                String filepath = devStorage.getDeviceImage(targetUID, targetDID, domainName);
+                if (filepath == null) {
+                    return new ServerResponse(MessageCode.NODATA);
+                }    
                 String enDomkey = domStorage.getDeviceEncryptedDomainKey(domainName, requesterUID);
                 return new ServerResponse(MessageCode.OK, serverImgFolder+filepath, enDomkey);
             }

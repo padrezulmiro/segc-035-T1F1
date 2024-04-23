@@ -1,5 +1,6 @@
 package iotserver;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -97,62 +98,62 @@ public class ServerThread extends Thread {
         // Send file (if aplicable)
         if( rCode == MessageCode.OK){
             out.writeObject(sr.encryptedDomainKey());
-            FileHelper.sendFile(sr.filePath(), out);
+            File f = new File(sr.filePath());
+            FileHelper.sendFile(f, out);
         }
     }
 
     private void getTemperatures() throws IOException, ClassNotFoundException {
+        
         String domain = (String) in.readObject();
         ServerResponse sr = manager.getTemperatures(this.userID,domain);
-        MessageCode res = sr.responseCode();
+        MessageCode res = sr.responseCode(); //includes encryptedDomainKey
         out.writeObject(res);
         if(res==MessageCode.OK){
-            // FileHelper.sendFile(sResponse.filePath(),out);
             out.writeObject(sr); 
         }
     }
 
-    private void getEncryptedDomainKeys() throws IOException, ClassNotFoundException {
+    private int getEncryptedDomainKeys() throws IOException, ClassNotFoundException {
         String userID = (String) in.readObject();
         String devID = (String) in.readObject();
         ServerResponse sr = manager.getEncryptedDomainKeys(userID,devID);
         out.writeObject(sr); 
+        return sr.allEncryptedDomainKeys().size();
     }
 
     private void registerImage(String devUID, String devDID)
                 throws IOException, ClassNotFoundException {
-        String filename = devUID + "_" + devDID + ".jpg"; //(String)in.readObject(); // screw this
-        long fileSize = (long)in.readObject();
-        String fullImgPath = IMAGE_DIR_PATH + filename;
-
-        FileHelper.receiveFile(fileSize, fullImgPath, in);
-
-        MessageCode res = manager
-            .registerImage(filename, this.userID, this.deviceID)
-            .responseCode();
-        out.writeObject(res);
+        String filename = devUID + "_" + devDID + ".jpg"; 
+        int numOfDom = getEncryptedDomainKeys();
+        for (int i = 0; i < numOfDom; i++) {
+            // reading domain name
+            String domainName = (String)in.readObject();
+            
+            // reading the file
+            String fullImgPath = IMAGE_DIR_PATH + "/" + domainName + "/" + filename;
+            // long fileSize = (long)in.readObject();
+            File f = new File(fullImgPath);
+            FileHelper.receiveFile(f, in);
+            MessageCode res = manager
+                .registerImage(fullImgPath, this.userID, this.deviceID, domainName)
+                .responseCode();
+            out.writeObject(res);
+        }
     }
 
     private void registerTemperature() throws IOException, ClassNotFoundException {
-        getEncryptedDomainKeys();
+        int numOfDom = getEncryptedDomainKeys();
 
-        // String domStr = (String) in.readObjklnklect();
-        // TODO: send it to each domain 
-        String tempStr = (String) in.readObject();
-        float temperature;
-        try {
-            temperature = Float.parseFloat(tempStr);
-        } catch (NumberFormatException e) {
-            out.writeObject(new ServerResponse(MessageCode.NOK));
+        for (int i = 0; i < numOfDom; i++) {
+            String domainName = (String) in.readObject();
+            String encryptedTempStr = (String) in.readObject();
+            MessageCode res = manager
+                .registerTemperature(encryptedTempStr, this.userID, this.deviceID, domainName)
+                .responseCode();
+            out.writeObject(res);
             out.flush();
-            return;
         }
-
-        MessageCode res = manager
-            .registerTemperature(temperature, this.userID, this.deviceID)
-            .responseCode();
-        out.writeObject(res);
-        out.flush();
     }
 
     private void registerDeviceInDomain() throws IOException, ClassNotFoundException {

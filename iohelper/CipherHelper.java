@@ -4,10 +4,12 @@ import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.security.AlgorithmParameters;
+import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.Key;
 import java.security.KeyStore;
@@ -29,6 +31,7 @@ import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
 import javax.crypto.SecretKeyFactory;
+import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.PBEKeySpec;
 import javax.crypto.spec.SecretKeySpec;
 
@@ -113,7 +116,34 @@ public class CipherHelper {
         return sKey;
     }
 
+
+    public static void encryptFileAES_ECB(SecretKey key, File inputFile, File outputFile)
+        throws IOException, NoSuchPaddingException, NoSuchAlgorithmException,
+                InvalidAlgorithmParameterException, InvalidKeyException, 
+                BadPaddingException, IllegalBlockSizeException {
     
+        Cipher c = Cipher.getInstance("AES/ECB/PKCS5Padding");
+        c.init(Cipher.ENCRYPT_MODE, key);
+
+        FileInputStream in = new FileInputStream(inputFile);
+        FileOutputStream out = new FileOutputStream(outputFile);
+
+        byte[] buffer = new byte[64];
+        int bytesRead;
+        while ((bytesRead = in.read(buffer)) != -1) {
+            byte[] outputBuffer = c.update(buffer, 0, bytesRead);
+            if (outputBuffer != null) {
+                out.write(outputBuffer);
+            }
+        }
+        byte[] outputBytes = c.doFinal();
+        if (outputBytes != null) {
+            out.write(outputBytes);
+        }
+
+        in.close();
+        out.close();
+    }
 
     /**
      * Encrypting data to be sent to server

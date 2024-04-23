@@ -11,6 +11,7 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.UnknownHostException;
+import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
@@ -106,9 +107,10 @@ public class IoTDevice {
                 String command = sc.nextLine();
                 try {
                     executeCommand(command);
-                } catch (InvalidKeyException | NoSuchAlgorithmException | NoSuchPaddingException
-                        | IllegalBlockSizeException | BadPaddingException | KeyStoreException | InvalidKeySpecException
-                        | ClassNotFoundException | IOException e) {
+                } catch (InvalidKeyException | NoSuchAlgorithmException | NoSuchPaddingException |
+                        IllegalBlockSizeException | BadPaddingException | KeyStoreException |
+                        InvalidKeySpecException | ClassNotFoundException | IOException |
+                        InvalidAlgorithmParameterException e) {
                     // TODO Auto-generated catch block
                     e.printStackTrace();
                 }
@@ -145,11 +147,13 @@ public class IoTDevice {
      * @throws ClassNotFoundException 
      * @throws InvalidKeySpecException 
      * @throws KeyStoreException 
+     * @throws InvalidAlgorithmParameterException 
      */
     private static void executeCommand(String command)
         throws InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException,
                 IllegalBlockSizeException, BadPaddingException, KeyStoreException,
-                InvalidKeySpecException, ClassNotFoundException, IOException {
+                InvalidKeySpecException, ClassNotFoundException, IOException,
+                InvalidAlgorithmParameterException {
         // First word is the command
         String[] cmds = command.split(" ");
         String op = cmds[0].toUpperCase();
@@ -232,12 +236,13 @@ public class IoTDevice {
                 case OK:
                     String enDomkey = (String) in.readObject();
                     // String s = (String) in.readObject(); // This is discarded
-                    long fileSize = (long) in.readObject(); // Read file size
-                    System.out.println("FIle size:" + fileSize);
+                    // long fileSize = (long) in.readObject(); // Read file size
                     // String[] dev = device.split(":");
                     String fileName = baseDir + dev[0] + "_" + dev[1] + ".jpg";
-                    FileHelper.receiveFile(fileSize, fileName, in);
-                    System.out.println(MessageCode.OK.getDesc() + ", " + fileSize + " (long)"); // TODO
+                    File f = new File(fileName);
+                    FileHelper.receiveFile(f, in);
+
+                    System.out.println(MessageCode.OK.getDesc() + ", " + f.length() + " (long)"); // TODO
                     break;
                 case NODATA:
                     System.out.println(MessageCode.NODATA.getDesc());
@@ -269,12 +274,12 @@ public class IoTDevice {
                     @SuppressWarnings("unchecked")
                     ServerResponse sResponse = (ServerResponse) in.readObject();
                     String enDomkey = sResponse.encryptedDomainKey();
-                    HashMap<String, Float> temps = (HashMap<String, Float>) sResponse.temperatures();
+                    HashMap<String, String> temps = (HashMap<String, String>) sResponse.temperatures();
                     for (@SuppressWarnings("unused")
                     String s : temps.keySet())
                         ;
                     for (@SuppressWarnings("unused")
-                    Number n : temps.values())
+                    String n : temps.values())
                         ;
                     // reason for the empty loops: https://stackoverflow.com/a/509288
                     // essentially ClassCastException will be thrown if any of the maps is bad
@@ -282,7 +287,7 @@ public class IoTDevice {
                     // TODO: write it to file
                     File f = new File((baseDir + "temps_" + domain + ".txt"));
                     BufferedWriter output = FileHelper.createFileWriter(f);
-                    for (Map.Entry<String, Float> entry : temps.entrySet()) {
+                    for (Map.Entry<String, String> entry : temps.entrySet()) {
                         output.write(entry.getKey() + ":" + entry.getValue() + System.getProperty("line.separator"));
                         output.flush();
                     }
@@ -307,21 +312,46 @@ public class IoTDevice {
         }
     }
 
-    private static void sendImage(String imagePath) {
+    private static void sendImage(String imagePath)
+        throws InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException,
+                IllegalBlockSizeException, BadPaddingException, InvalidAlgorithmParameterException {
         try {
             out.writeObject(MessageCode.EI); // Send opcode
-            FileHelper.sendFile((imagePath), out);
-            // Receive message
-            MessageCode code = (MessageCode) in.readObject();
-            switch (code) {
-                case OK:
-                    System.out.println(MessageCode.OK.getDesc());
-                    break;
-                case NOK:
-                    System.out.println(MessageCode.NOK.getDesc());
-                    break;
-                default:
-                    break;
+
+            //get (domain,encrypted keys) map
+            HashMap<String,String> enDomkeysMap = getDeviceEncryptedDomainKey();
+
+            for (String dom : enDomkeysMap.keySet()){
+
+                // getting secret key
+                String enDomkey = enDomkeysMap.get(dom);
+                byte[] wrappedKey = Base64.getDecoder().decode(enDomkey);
+                SecretKey sKey = (SecretKey) CipherHelper.unwrap(privateKey, wrappedKey);
+
+                // write domain name
+                out.writeObject(dom);                
+
+                // encrypt file with secret key
+                File plainFile = new File(imagePath);
+                String enFileName = plainFile.getParent() + "en_" + plainFile.getName();
+                File encryptedFile = new File(enFileName);
+                // encrypt the image, this file is the one sent
+                CipherHelper.encryptFileAES_ECB(sKey, plainFile, encryptedFile);
+                FileHelper.sendFile(encryptedFile, out); 
+                encryptedFile.delete();
+
+                // receive message
+                MessageCode code = (MessageCode) in.readObject();
+                switch (code) {
+                    case OK:
+                        System.out.println(MessageCode.OK.getDesc());
+                        break;
+                    case NOK:
+                        System.out.println(MessageCode.NOK.getDesc());
+                        break;
+                    default:
+                        break;
+                }
             }
         } catch (IOException | ClassNotFoundException e) {
             // TODO Auto-generated catch block
@@ -343,16 +373,14 @@ public class IoTDevice {
         throws InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException,
                 IllegalBlockSizeException, BadPaddingException { // Should it test if the value can be converted to a float?
         try {
+            //This is to trigger NumberFormatException if it wasn't a float
+            Float.parseFloat(temp);
+
             out.writeObject(MessageCode.ET); // Send opcode
 
-            out.writeObject(userid);
-            out.writeObject(devid);
-            // read a ServerResponse for confirmation + domkeys
-            ServerResponse sr = (ServerResponse)in.readObject();
-            if(sr.responseCode()!=MessageCode.OK){return;}
-            HashMap<String,String> enDomkeysMap = sr.allEncryptedDomainKeys();
+            //get (domain,encrypted keys) map
+            HashMap<String,String> enDomkeysMap = getDeviceEncryptedDomainKey();
 
-            
             // for every domkey: unwrap with privatekey, encrypt temp with domain key, and then send
             for (String dom : enDomkeysMap.keySet()){
                 // getting encrypted dom keys
@@ -381,7 +409,19 @@ public class IoTDevice {
         } catch (IOException | ClassNotFoundException e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
+        } catch(NumberFormatException e) {
+            System.err.println("Temperature needs to be a float.");
+            return;
         }
+    }
+
+    private static HashMap<String,String>  getDeviceEncryptedDomainKey()
+            throws ClassNotFoundException, IOException{
+        out.writeObject(userid);
+        out.writeObject(devid);
+        // read a ServerResponse for confirmation + domkeys
+        ServerResponse sr = (ServerResponse)in.readObject();
+        return sr.allEncryptedDomainKeys();
     }
 
     private static void registerDevice(String domain) {

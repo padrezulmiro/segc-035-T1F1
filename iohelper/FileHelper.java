@@ -14,7 +14,13 @@ import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.OutputStream;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
 import java.util.Map;
+
+import javax.crypto.Cipher;
+import javax.crypto.NoSuchPaddingException;
+import javax.crypto.SecretKey;
 
 public class FileHelper {
     // private ObjectOutputStream out;
@@ -30,8 +36,7 @@ public class FileHelper {
      * 
      * @param path File path
      */
-    public static void sendFile(String path,ObjectOutputStream out) {
-        File f = new File(path);
+    public static void sendFile(File f,ObjectOutputStream out) {
         long fileSize = f.length();
         try {
             // Send file name
@@ -64,9 +69,9 @@ public class FileHelper {
      * @param fileSize File size.
      * @param path File path
      */
-    public static void receiveFile(Long fileSize, String path, ObjectInputStream in) {
+    public static void receiveFile(File f, ObjectInputStream in) {
         try {
-            File f = new File(path);
+            long fileSize = (long) in.readObject(); // Read file size
             f.createNewFile();
 
             FileOutputStream fout = new FileOutputStream(f);
@@ -84,7 +89,7 @@ public class FileHelper {
             }
             output.close();
             fout.close();
-        } catch (IOException e) {
+        } catch (IOException | ClassNotFoundException e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
         }
