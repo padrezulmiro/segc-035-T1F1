@@ -1,17 +1,33 @@
 package iotserver;
 
-import java.util.HashSet;
+import java.util.HashMap;
 import java.util.Set;
+
 
 public class Device {
     private String userId;
     private String devId;
-    private String fullId;
 
     private boolean online;
-    private String imgPath;
-    private Float temp;
-    private Set<String> registeredDomains;
+    // private Set<String> registeredDomains;
+    // domain,   possible img, possible temp
+    private HashMap<String, StoredData> domainDataMap;
+
+    public class StoredData {
+        public StoredData(String img, String tempStr) {
+           this.image = img;
+           this.tempStr = tempStr;
+        }
+    
+        public void setImagePath(String image) {this.image = image;}
+        public void setTempStr(String temp) {this.tempStr = temp;}
+
+        public String getImagePath() { return this.image; }
+        public String getTempStr() { return this.tempStr; }
+    
+        private String image;
+        private String tempStr;
+    }
 
     public Device(String fullId) {
         this(fullId.split(":")[0], fullId.split(":")[1]);
@@ -20,11 +36,9 @@ public class Device {
     public Device(String userId, String devId) {
         this.userId = userId;
         this.devId = devId;
-        this.fullId = userId + ":" + devId;
         this.online = false;
-        this.imgPath = null;
-        this.temp = null;
-        this.registeredDomains = new HashSet<>();
+        // this.registeredDomains = new HashSet<>();
+        this.domainDataMap = new HashMap<>();
     }
 
     public boolean isOnline() {
@@ -43,28 +57,33 @@ public class Device {
         return userId + ":" + devId;
     }
 
-    public void registerImage(String imgPath) {
-        this.imgPath=imgPath;
+    public void registerImage(String imgPath, String domainName) {
+        // this.imgPath=imgPath;
+        StoredData sd = domainDataMap.get(domainName);
+        sd.setImagePath(imgPath);
     }
 
     public void registerInDomain(String domainName) {
-        registeredDomains.add(domainName);
+        // registeredDomains.add(domainName);
+        domainDataMap.put(domainName, new StoredData(null,null));
     }
 
-    public void registerTemperature(float temperature) {
-        temp = temperature;
+    public void registerTemperature(String temperature, String domainName) {
+        StoredData sd = domainDataMap.get(domainName);
+        sd.setTempStr(temperature);
     }
 
-    public Float getTemperature(){
-        return this.temp;
+    public String getTemperature(String domainName){
+        return domainDataMap.get(domainName).getTempStr();
     }
 
-    public String getImagePath() {
-        return imgPath;
+    public String getImagePath(String domainName) {
+        return domainDataMap.get(domainName).getImagePath();
     }
 
     public Set<String> getDomains(){
-        return this.registeredDomains;
+        // return this.registeredDomains;
+        return domainDataMap.keySet();
     }
 
 
@@ -85,15 +104,21 @@ public class Device {
         return code;
     }
 
+
     @Override
     public String toString() {
+        return fullId();
+    }
+    
+    // @Override
+    public String toString(String domain) {
         final char NL = '\n';
         final char SP = ':';
 
-        String temperature = getTemperature() != null ?
-            Float.toString(getTemperature()) : "";
-        String imagePath = getImagePath() != null ?
-            getImagePath() : "";
+        String temperature = getTemperature(domain) != null ?
+            getTemperature(domain) : "";
+        String imagePath = getImagePath(domain) != null ?
+            getImagePath(domain) : "";
 
         StringBuilder sb = new StringBuilder();
         sb.append(fullId() + SP + temperature + SP + imagePath + NL);

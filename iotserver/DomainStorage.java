@@ -19,7 +19,7 @@ public class DomainStorage {
     private Lock wLock;
     private Lock rLock;
 
-    public DomainStorage(String domainFilePath) {
+    public DomainStorage(String domainFilePath, DeviceStorage devStorage) {
         domainsFile = new File(domainFilePath);
         domains = new HashMap<>();
 
@@ -30,7 +30,7 @@ public class DomainStorage {
         }
 
         try {
-            populateDomainsFromFile();
+            populateDomainsFromFile(devStorage);
         } catch (IOException e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
@@ -68,20 +68,27 @@ public class DomainStorage {
         return domain.getDeviceEncryptedDomainKey(userID);
     }
 
-    public Map<String, Float> temperatures(String domainName,
+    /**
+     * Retrieving all domain's temperature
+     * @param domainName the domain to check
+     * @param devStorage 
+     * @return Map<devFullID, encryptedTempStr> where temp is encrypted by
+     *         the domain's secret key
+     */
+    public Map<String, String> temperatures(String domainName,
             DeviceStorage devStorage) {
         //FIXME A better implementation doesn't need access to devStorage
         // This can be achieved by refactoring the domain's registered devices
         // as a Set<Device> instead of Set<String>
 
         Domain domain = domains.get(domainName);
-        Map<String, Float> temperatures = new HashMap<>();
+        Map<String, String> temperatures = new HashMap<>();
 
         for (String fullDevID : domain.getDevices()) {
             String userID = Utils.userIDFromFullID(fullDevID);
             String devID = Utils.devIDFromFullID(fullDevID);
-            Float devTemperature =
-                devStorage.getDeviceTemperature(userID, devID);
+            String devTemperature =
+                devStorage.getDeviceTemperature(userID, devID, domainName);
                 temperatures.put(fullDevID, devTemperature);
         }
         return temperatures;
@@ -148,7 +155,7 @@ public class DomainStorage {
         }
     }
 
-    private void populateDomainsFromFile() throws IOException {
+    private void populateDomainsFromFile(DeviceStorage devStorage) throws IOException {
         final char SP = ':';
         final char TAB = '\t';
 
@@ -177,9 +184,13 @@ public class DomainStorage {
             }else {
                 String devUID = tokens[0];
                 String devDID = tokens[1];
+                String imgPath = tokens[2];
+                String enTempStr = tokens[3];
                 domains
                 .get(currentDomainName)
                 .registerDevice(Utils.fullID(devUID, devDID));
+                devStorage.saveDeviceImage(devUID, devDID, imgPath, currentDomainName);
+                devStorage.saveDeviceTemperature(devUID, devDID, enTempStr, currentDomainName);
             }
         }
     }

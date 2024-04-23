@@ -59,22 +59,22 @@ public class DeviceStorage {
         updateDevicesFile();
     }
 
-    public void saveDeviceImage(String userID, String devID, String imgPath) {
-        devices.get(Utils.fullID(userID, devID)).registerImage(imgPath);
+    public void saveDeviceImage(String userID, String devID, String imgPath, String domainName) {
+        devices.get(Utils.fullID(userID, devID)).registerImage(imgPath, domainName);
         updateDevicesFile();
     }
 
-    public String getDeviceImage(String userID, String devID) {
-        return devices.get(Utils.fullID(userID, devID)).getImagePath();
+    public String getDeviceImage(String userID, String devID, String domainName) {
+        return devices.get(Utils.fullID(userID, devID)).getImagePath(domainName);
     }
 
-    public void saveDeviceTemperature(String userID, String devID, float temp) {
-        devices.get(Utils.fullID(userID, devID)).registerTemperature(temp);
+    public void saveDeviceTemperature(String userID, String devID, String temp, String domainName) {
+        devices.get(Utils.fullID(userID, devID)).registerTemperature(temp, domainName);
         updateDevicesFile();
     }
 
-    public Float getDeviceTemperature(String userID, String devID) {
-        return devices.get(Utils.fullID(userID, devID)).getTemperature();
+    public String getDeviceTemperature(String userID, String devID, String domainName) {
+        return devices.get(Utils.fullID(userID, devID)).getTemperature(domainName);
     }
 
     public boolean deviceExists(String userID, String devID) {
@@ -139,8 +139,9 @@ public class DeviceStorage {
             String imagePath = tokens[3];;
 
             Device device = new Device(uid, did);
-            if(temperature != null){device.registerTemperature(temperature);}
-            if(imagePath!=null) device.registerImage(imagePath);
+            // devices.txt dont need anything 
+            // if(temperature != null){device.registerTemperature(temperature);}
+            // if(imagePath!=null) device.registerImage(imagePath);
 
             devices.put(Utils.fullID(uid, did), device);
         }

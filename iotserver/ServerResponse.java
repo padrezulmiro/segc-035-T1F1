@@ -15,7 +15,7 @@ public class ServerResponse implements Serializable{
     private long fileSize;
     private transient InputStream fileStream;
     private String filePath;
-    private Map<String,Float> temperatures;
+    private Map<String,String> temperatures; // devFullID, encryptedTempID
     private String encryptedDomainKey;
     private HashMap<String,String> allEncryptedDomainKeys;
 
@@ -44,7 +44,7 @@ public class ServerResponse implements Serializable{
         }
     }
 
-    public ServerResponse(MessageCode code, Map<String,Float> temps, String enDomkey){
+    public ServerResponse(MessageCode code, Map<String,String> temps, String enDomkey){
         this.code = code;
         this.temperatures = temps;
         this.encryptedDomainKey = enDomkey;
@@ -66,7 +66,7 @@ public class ServerResponse implements Serializable{
         return filePath;
     }
 
-    public Map<String,Float> temperatures(){
+    public Map<String,String> temperatures(){
         return temperatures;
     }
 
