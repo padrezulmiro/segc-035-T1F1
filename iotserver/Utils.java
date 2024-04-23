@@ -46,6 +46,6 @@ public class Utils {
     }
 
     public static String certPathFromUser(String user) {
-        return "scerts/" + user + ".cert";
+        return "output/server/scerts/" + user + ".cert";
     }
 }
