@@ -22,6 +22,7 @@ import java.util.Base64;
 import java.util.concurrent.ThreadLocalRandom;
 
 import iohelper.FileHelper;
+import iohelper.Utils;
 
 public class ServerAuth {
     private static volatile ServerAuth INSTANCE;
