@@ -153,6 +153,7 @@ public class ServerThread extends Thread {
             NoSuchAlgorithmException {
         long nonce = ServerAuth.generateNonce();
         out.writeLong(nonce);
+        out.flush();
 
         byte[] receivedHash = (byte[]) in.readObject();
         if (ServerAuth.verifyAttestationHash(receivedHash, nonce)) {

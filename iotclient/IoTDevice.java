@@ -113,6 +113,7 @@ public class IoTDevice {
                     break;
                 case OK_DEVID:
                     System.out.println(MessageCode.OK_DEVID.getDesc());
+                    out.writeObject(MessageCode.TD);
                     long nonce = in.readLong();
                     sendAttestationHash(nonce);
                     MessageCode attestCode = (MessageCode) in.readObject();
