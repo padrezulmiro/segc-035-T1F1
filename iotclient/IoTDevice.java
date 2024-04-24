@@ -1,9 +1,12 @@
 package iotclient;
 
 import iohelper.FileHelper;
+import iohelper.Utils;
+
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.ObjectInputStream;
@@ -13,6 +16,7 @@ import java.nio.ByteBuffer;
 import java.security.InvalidKeyException;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
+import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
 import java.security.Signature;
@@ -84,12 +88,8 @@ public class IoTDevice {
 
         // Connection & Authentication
         if (connect(serverAddress)) {
-            // userAuth(userid, "");
             twoFactorAuth(userid);
-            // deviceAuth(devid);nesta 2ª fase, o dev-id já não é verificado durante o
-            // processo de autenticação,
-            // mas será verificado durante o processo de atestação remota (Secção 4.3).
-            // testDevice();
+            remoteAttestation(devid);
             printMenu();
             // Program doesn't end until CTRL+C is pressed
             while (true) {// Steps 8 - 10
@@ -97,6 +97,80 @@ public class IoTDevice {
                 String command = sc.nextLine();
                 executeCommand(command);
             }
+        }
+    }
+
+    private static void remoteAttestation(String deviceID) {
+        try {
+            System.out.println("Starting remote attestation.");
+            out.writeObject(MessageCode.AD);
+            out.writeObject(deviceID);
+
+            MessageCode code = (MessageCode) in.readObject();
+            switch (code) {
+                case NOK_DEVID:
+                    System.out.println(MessageCode.NOK_DEVID.getDesc());
+                    System.exit(-1); // Connection is shut down by the shutdown hook.
+                    break;
+                case OK_DEVID:
+                    System.out.println(MessageCode.OK_DEVID.getDesc());
+                    out.writeObject(MessageCode.TD);
+                    long nonce = in.readLong();
+                    sendAttestationHash(nonce);
+                    MessageCode attestCode = (MessageCode) in.readObject();
+                    switch (attestCode) {
+                        case NOK_TESTED:
+                            System.out.println(MessageCode.NOK_TESTED.getDesc());
+                            System.exit(-1);
+                            break;
+                        case OK_TESTED:
+                            System.out.println(MessageCode.OK_TESTED.getDesc());
+                            break;
+                        default:
+                            break;
+                    }
+                default:
+                    break;
+            }
+        } catch (IOException e) {
+            System.err.println("ERROR" + e.getMessage());
+            System.exit(-1);
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+            System.exit(-1);
+        }
+    }
+
+    private static void sendAttestationHash(long nonce) {
+        try {
+            final int CHUNK_SIZE = 1024;
+            String clientExecPath = Utils.getAttestationPath();
+            long clientExecSize = new File(clientExecPath).length();
+            FileInputStream clientFIS;
+            clientFIS = new FileInputStream(clientExecPath);
+            MessageDigest md = MessageDigest.getInstance("SHA");
+
+            long leftToRead = clientExecSize;
+            while (leftToRead >= CHUNK_SIZE) {
+                md.update(clientFIS.readNBytes(CHUNK_SIZE)); // MessageDigest.update *appends* the byte array provided
+                leftToRead -= CHUNK_SIZE;
+            }
+
+            md.update(clientFIS.readNBytes(Long.valueOf(leftToRead).intValue()));
+            md.update(ByteBuffer.allocate(8).putLong(nonce).array());
+            clientFIS.close();
+            byte[] attestationHash = md.digest();
+            out.writeObject(attestationHash);
+
+        } catch (FileNotFoundException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        } catch (IOException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        } catch (NoSuchAlgorithmException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
         }
     }
 
@@ -159,7 +233,8 @@ public class IoTDevice {
                 // FACTOR 2 - Email auth
                 MessageCode emailCode;
                 do {
-                    System.out.println("Check your email for an authentication code.");;
+                    System.out.println("Check your email for an authentication code.");
+                    ;
                     System.out.print("> Code: ");
                     String c2fa = sc.nextLine();
                     out.writeInt(Integer.valueOf(c2fa));
