@@ -15,11 +15,12 @@ import java.security.NoSuchAlgorithmException;
 import java.security.Signature;
 import java.security.SignatureException;
 import java.security.cert.Certificate;
+import java.security.cert.CertificateEncodingException;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
-import java.util.concurrent.ThreadLocalRandom;
-import java.security.cert.CertificateEncodingException;
 import java.util.Base64;
+import java.util.concurrent.ThreadLocalRandom;
+
 import iohelper.Utils;
 
 public class ServerAuth {
