@@ -28,7 +28,7 @@ public class ServerManager {
     private ServerManager(){
         domStorage = new DomainStorage(domainFilePath);
         devStorage = new DeviceStorage(deviceFilePath);
-        userStorage = new UserStorage(userFilePath);
+        userStorage = new UserStorage(userFilePath, "");
 
         new File(imageDirectoryPath).mkdirs();
         new File(temperatureDirectoryPath).mkdirs();

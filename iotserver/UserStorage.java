@@ -2,40 +2,64 @@ package iotserver;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
-import java.io.FileReader;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.PrintWriter;
+import java.nio.ByteBuffer;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.security.AlgorithmParameters;
+import java.security.InvalidAlgorithmParameterException;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
+import java.security.spec.InvalidKeySpecException;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import javax.crypto.Cipher;
+import javax.crypto.CipherInputStream;
+import javax.crypto.CipherOutputStream;
+import javax.crypto.NoSuchPaddingException;
+import javax.crypto.SecretKey;
+import javax.crypto.SecretKeyFactory;
+import javax.crypto.spec.PBEKeySpec;
 
 public class UserStorage {
+    private final static String PBE_PARAMS_PATH = "pbe-params";
+    private final static String PBE_ALGORITHM = "PBEWithHmacSHA256AndAES_128";
+    private final static int SALT_LENGTH = 8;
+
+    // FIXME(azul) Init these values
+    private SecretKey pbeKey;
+    private AlgorithmParameters pbeParams;
+
     private Map<String, String> users;
     private File usersFile;
     private Lock wLock;
     private Lock rLock;
+    private String cipherPwd;
 
-    public UserStorage(String usersFilePath) {
-        users = new HashMap<>();
+    public UserStorage(String usersFilePath, String cipherPwd) {
         usersFile = new File(usersFilePath);
+        this.cipherPwd = cipherPwd;
+
+        users = new HashMap<>();
         ReentrantReadWriteLock rwLock = new ReentrantReadWriteLock(true);
         wLock = rwLock.writeLock();
         rLock = rwLock.readLock();
 
         try {
+            initPBEParams();
             usersFile.createNewFile();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-        try {
             populateUsersFromFile();
-        } catch (IOException e) {
-            // TODO Auto-generated catch block
+        } catch (IOException |
+                 NoSuchAlgorithmException |
+                 InvalidKeySpecException |
+                 NoSuchPaddingException e) {
             e.printStackTrace();
         }
     }
@@ -79,18 +103,27 @@ public class UserStorage {
             sb.append(user + SEP + users.get(user) + NL);
         }
 
-        try (PrintWriter pw = new PrintWriter(usersFile)) {
-            pw.write(sb.toString());
-            pw.close();
-        } catch (FileNotFoundException e) {
+        try {
+            encryptToFile(sb.toString());
+        } catch (InvalidKeyException |
+                 NoSuchAlgorithmException |
+                 NoSuchPaddingException |
+                 InvalidAlgorithmParameterException |
+                 IOException e) {
             e.printStackTrace();
         }
     }
 
     private void populateUsersFromFile() throws IOException {
-        BufferedReader reader = new BufferedReader(new FileReader(usersFile));
-        String[] lines = (String[]) reader.lines().toArray(String[]::new);
-        reader.close();
+        String[] lines = null;
+        try {
+            lines = decryptLinesFromFile();
+        } catch (InvalidKeyException |
+                 NoSuchAlgorithmException |
+                 NoSuchPaddingException |
+                 InvalidAlgorithmParameterException e) {
+            e.printStackTrace();
+        }
 
         for (String line: lines) {
             String[] tokens  = Utils.split(line, ':');
@@ -98,5 +131,53 @@ public class UserStorage {
             String certPath = tokens[1];
             registerUser(user, certPath);
         }
+    }
+
+    private void initPBEParams() throws IOException, NoSuchAlgorithmException,
+            InvalidKeySpecException, NoSuchPaddingException {
+        ByteBuffer paramsBB = ByteBuffer
+            .wrap(Files.readAllBytes(Paths.get(PBE_PARAMS_PATH)));
+
+        int pbeIterations = paramsBB.getInt();
+
+        byte[] pbeSalt = new byte[SALT_LENGTH];
+        paramsBB.get(pbeSalt);
+
+        byte[] pbeAlgorithmParameters = new byte[paramsBB.remaining()];
+        paramsBB.get(pbeAlgorithmParameters);
+
+        PBEKeySpec keySpec = new PBEKeySpec(cipherPwd.toCharArray(), pbeSalt,
+                pbeIterations);
+        SecretKeyFactory kf = SecretKeyFactory.getInstance(PBE_ALGORITHM);
+        pbeKey = kf.generateSecret(keySpec);
+
+        pbeParams = AlgorithmParameters.getInstance(PBE_ALGORITHM);
+        pbeParams.init(pbeAlgorithmParameters);
+    }
+
+    private String[] decryptLinesFromFile() throws NoSuchAlgorithmException,
+            NoSuchPaddingException, InvalidKeyException,
+            InvalidAlgorithmParameterException, FileNotFoundException {
+        Cipher cipher = Cipher.getInstance(PBE_ALGORITHM);
+        cipher.init(Cipher.DECRYPT_MODE, pbeKey, pbeParams);
+
+        CipherInputStream cis =
+            new CipherInputStream(new FileInputStream(usersFile), cipher);
+
+        BufferedReader reader = new BufferedReader(new InputStreamReader(cis));
+        return reader.lines().toArray(String[]::new);
+    }
+
+    private void encryptToFile(String body) throws NoSuchAlgorithmException,
+            IOException, NoSuchPaddingException, InvalidKeyException,
+            InvalidAlgorithmParameterException {
+        Cipher cipher = Cipher.getInstance(PBE_ALGORITHM);
+        cipher.init(Cipher.ENCRYPT_MODE, pbeKey, pbeParams);
+
+        new PrintWriter(usersFile).close();
+
+        CipherOutputStream cos =
+            new CipherOutputStream(new FileOutputStream(usersFile), cipher);
+        cos.write(body.getBytes());
     }
 }

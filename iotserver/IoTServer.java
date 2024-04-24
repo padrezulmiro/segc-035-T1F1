@@ -40,12 +40,11 @@ public class IoTServer {
         }
 
         ServerAuth.setApiKey(apiKeyArg);
+        ServerAuth.setCypherPwd(usersCypherPwdArg);
 
         System.setProperty("javax.net.ssl.keyStore", keystorePathArg);
         System.setProperty("javax.net.ssl.keyStorePassword", keystorePwdArg);
         System.setProperty("javax.net.ssl.keyStoreType", "JCEKS");
-
-        //TODO Add users' file password cypher to server manager
 
         IoTServer server = new IoTServer(portArg,
                 keystorePathArg, keystorePwdArg, apiKeyArg);

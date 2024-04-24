@@ -22,9 +22,15 @@ public class ServerAuth {
 
     private static final String USER_FILEPATH = "user.txt";
     private static final String CLIENT_EXEC_PATH = "IoTDevice.jar";
+
     private static String apiKey;
+    private static String cipherPwd;
 
     private UserStorage userStorage;
+
+    private ServerAuth() {
+        userStorage = new UserStorage(USER_FILEPATH, cipherPwd);
+    }
 
     public static ServerAuth getInstance() {
         ServerAuth instance = INSTANCE;
@@ -34,10 +40,6 @@ public class ServerAuth {
             if (instance == null) instance = new ServerAuth();
             return instance;
         }
-    }
-
-    private ServerAuth() {
-        userStorage = new UserStorage(USER_FILEPATH);
     }
 
     public boolean isUserRegistered(String user) {
@@ -69,6 +71,10 @@ public class ServerAuth {
 
     public static long generateNonce() {
         return ThreadLocalRandom.current().nextLong();
+    }
+
+    public static void setCypherPwd(String pwd) {
+        cipherPwd = pwd;
     }
 
     public static void setApiKey(String key) {
