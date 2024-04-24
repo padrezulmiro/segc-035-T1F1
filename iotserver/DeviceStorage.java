@@ -49,7 +49,7 @@ public class DeviceStorage {
         updateDevicesFile();
     }
 
-    public Set<String> getDomains(String userID, String devID){
+    public Set<String> getDeviceDomains(String userID, String devID){
         return devices.get(Utils.fullID(userID, devID)).getDomains();
     }
 
@@ -134,9 +134,9 @@ public class DeviceStorage {
             String[] tokens = Utils.split(lines[i], SP);
             String uid = tokens[0];
             String did = tokens[1];
-            Float temperature = null;
-            if(!tokens[2].equals("")){temperature = Float.parseFloat(tokens[2]);}
-            String imagePath = tokens[3];;
+            // Float temperature = null;
+            // if(!tokens[2].equals("")){temperature = Float.parseFloat(tokens[2]);}
+            // String imagePath = tokens[3];;
 
             Device device = new Device(uid, did);
             // devices.txt dont need anything 

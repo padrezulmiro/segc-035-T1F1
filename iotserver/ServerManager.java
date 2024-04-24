@@ -213,7 +213,8 @@ public class ServerManager {
         domStorage.readLock();
         devStorage.readLock();
         try {
-            Set<String> domains = devStorage.getDomains(userId, devId);
+            Set<String> domains = domStorage.getUserDomains(userId);
+
             HashMap<String,String> encryptedDomainKeys = new HashMap<>();
             for (String dom : domains){
                 String enDomkey = domStorage.getDeviceEncryptedDomainKey(dom, userId);

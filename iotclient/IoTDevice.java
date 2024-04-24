@@ -236,6 +236,10 @@ public class IoTDevice {
         try {
             out.writeObject(MessageCode.RI); // Send opcode
             String[] dev = device.split(":");
+            if (dev.length!=2){
+                System.out.println("Incorrect user:dev format.");
+                return;
+            }
             out.writeObject(dev[0]);
             out.writeObject(dev[1]);
             // Receive message
@@ -345,7 +349,7 @@ public class IoTDevice {
             out.writeObject(MessageCode.EI); // Send opcode
 
             //get (domain,encrypted keys) map
-            HashMap<String,String> enDomkeysMap = getDeviceEncryptedDomainKey();
+            HashMap<String,String> enDomkeysMap = getDeviceEncryptedDomainKeys();
 
             for (String dom : enDomkeysMap.keySet()){
 
@@ -395,9 +399,7 @@ public class IoTDevice {
      * @throws NoSuchAlgorithmException 
      * @throws InvalidKeyException 
      */
-    private static void sendTemperature(String temp) 
-        throws InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException,
-                IllegalBlockSizeException, BadPaddingException { // Should it test if the value can be converted to a float?
+    private static void sendTemperature(String temp){ // Should it test if the value can be converted to a float?
         try {
             //This is to trigger NumberFormatException if it wasn't a float
             Float.parseFloat(temp);
@@ -405,10 +407,14 @@ public class IoTDevice {
             out.writeObject(MessageCode.ET); // Send opcode
 
             //get (domain,encrypted keys) map
-            HashMap<String,String> enDomkeysMap = getDeviceEncryptedDomainKey();
+            HashMap<String,String> enDomkeysMap = getDeviceEncryptedDomainKeys();
 
-            // for every domkey: unwrap with privatekey, encrypt temp with domain key, and then send
+            System.out.println("enDomkeysMap:");
+            for (Map.Entry<String, String> entry : enDomkeysMap.entrySet()) {
+                System.out.println(entry.getKey() + ": " + entry.getValue());
+            }            // for every domkey: unwrap with privatekey, encrypt temp with domain key, and then send
             for (String dom : enDomkeysMap.keySet()){
+                System.out.println("dom:"+dom);
                 // getting encrypted dom keys
                 String enDomkey = enDomkeysMap.get(dom);
                 byte[] wrappedKey = Base64.getDecoder().decode(enDomkey);
@@ -416,7 +422,9 @@ public class IoTDevice {
                 // use sKey to encrypt temp
                 byte[] encryptedTemp = CipherHelper.encryptAES_ECB(sKey, temp.getBytes());
                 out.writeObject(dom);                
-                out.writeObject(new String (encryptedTemp));
+                String enString = new String (encryptedTemp);
+                System.out.println(enString);
+                out.writeObject(enString);
 
                 // receive message
                 MessageCode code = (MessageCode) in.readObject();
@@ -438,10 +446,25 @@ public class IoTDevice {
         } catch(NumberFormatException e) {
             System.err.println("Temperature needs to be a float.");
             return;
+        } catch (InvalidKeyException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        } catch (NoSuchAlgorithmException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        } catch (NoSuchPaddingException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        } catch (IllegalBlockSizeException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        } catch (BadPaddingException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
         }
     }
 
-    private static HashMap<String,String>  getDeviceEncryptedDomainKey()
+    private static HashMap<String,String> getDeviceEncryptedDomainKeys()
             throws ClassNotFoundException, IOException{
         out.writeObject(userid);
         out.writeObject(devid);

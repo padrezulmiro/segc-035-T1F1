@@ -107,7 +107,7 @@ public class Device {
 
     @Override
     public String toString() {
-        return fullId();
+        return fullId() + "\n";
     }
     
     // @Override

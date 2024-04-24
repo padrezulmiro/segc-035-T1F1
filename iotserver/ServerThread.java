@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
+import java.util.Map;
 
 import iotclient.MessageCode;
 import iohelper.FileHelper;
@@ -118,7 +119,13 @@ public class ServerThread extends Thread {
     private int getEncryptedDomainKeys() throws IOException, ClassNotFoundException {
         String userID = (String) in.readObject();
         String devID = (String) in.readObject();
-        ServerResponse sr = manager.getEncryptedDomainKeys(userID,devID);
+        ServerResponse sr = manager.getEncryptedDomainKeys(userID,devID); //
+
+        System.out.println("endomkeys:");
+        for (Map.Entry<String, String> entry : sr.allEncryptedDomainKeys().entrySet()) {
+            System.out.println(entry.getKey() + ": " + entry.getValue());
+        }
+
         out.writeObject(sr); 
         return sr.allEncryptedDomainKeys().size();
     }

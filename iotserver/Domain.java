@@ -20,9 +20,6 @@ public class Domain {
     }
 
     public boolean registerUser(String userId, String enDomkey) {
-        // if (this.isOwner(userId)){ // BECAUSE you'll have to register owner as well
-        //     return false;
-        // }
         if(registeredUsers.add(userId)){
             registerEncryptedDomainKey(userId, enDomkey);
             return true;

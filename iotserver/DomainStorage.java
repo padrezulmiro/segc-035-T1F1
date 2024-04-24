@@ -7,7 +7,9 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
@@ -112,6 +114,16 @@ public class DomainStorage {
             String domainName) {
         Domain domain = domains.get(domainName);
         return domain.isDeviceRegistered(Utils.fullID(userID, devID));
+    }
+
+    public Set<String> getUserDomains(String userID){
+        Set<String> userDomains = new HashSet<String>();
+        for (String dom : domains.keySet()){
+            if (isUserRegisteredInDomain(userID, dom)){
+                userDomains.add(dom);
+            }
+        }
+        return userDomains;
     }
 
     public void readLock() {
