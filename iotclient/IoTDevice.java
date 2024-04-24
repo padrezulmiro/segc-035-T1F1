@@ -1,6 +1,8 @@
 package iotclient;
 
 import iohelper.FileHelper;
+import iohelper.Utils;
+
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
@@ -38,7 +40,6 @@ import javax.net.ssl.SSLSocketFactory;
 public class IoTDevice {
     private static final int DEFAULT_PORT = 12345;
     private static final int ARG_NUM = 6;
-    private static final String CLIENT_EXEC_PATH = "IoTDevice.jar";
 
     static String userid;
     static String devid;
@@ -143,10 +144,10 @@ public class IoTDevice {
     private static void sendAttestationHash(long nonce) {
         try {
             final int CHUNK_SIZE = 1024;
-
-            long clientExecSize = new File(CLIENT_EXEC_PATH).length();
+            String clientExecPath = Utils.getAttestationPath();
+            long clientExecSize = new File(clientExecPath).length();
             FileInputStream clientFIS;
-            clientFIS = new FileInputStream(CLIENT_EXEC_PATH);
+            clientFIS = new FileInputStream(clientExecPath);
             MessageDigest md = MessageDigest.getInstance("SHA");
 
             long leftToRead = clientExecSize;

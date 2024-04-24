@@ -26,7 +26,6 @@ public class ServerAuth {
     private static volatile ServerAuth INSTANCE;
 
     private static final String USER_FILEPATH = "user.txt";
-    private static final String CLIENT_EXEC_PATH = "IoTDevice.jar";
     private static String apiKey;
 
     private UserStorage userStorage;
@@ -149,9 +148,9 @@ public class ServerAuth {
     public static boolean verifyAttestationHash(byte[] hash, long nonce)
             throws IOException, NoSuchAlgorithmException {
         final int CHUNK_SIZE = 1024;
-
-        long clientExecSize = new File(CLIENT_EXEC_PATH).length();
-        FileInputStream clientExecInStream = new FileInputStream(CLIENT_EXEC_PATH);
+        String clientExecPath = Utils.getAttestationPath();
+        long clientExecSize = new File(clientExecPath).length();
+        FileInputStream clientExecInStream = new FileInputStream(clientExecPath);
         MessageDigest md = MessageDigest.getInstance("SHA");
 
         long leftToRead = clientExecSize;
