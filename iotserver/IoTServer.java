@@ -9,7 +9,7 @@ import javax.net.ssl.SSLServerSocketFactory;
 public class IoTServer {
     public static final ServerManager SERVER_MANAGER = ServerManager
         .getInstance();
-    public static final ServerAuth SERVER_AUTH = ServerAuth.getInstance();
+    public static ServerAuth SERVER_AUTH;
 
     private static final int ARG_NUM = 5;
     private static final int DEFAULT_PORT = 12345;
@@ -39,8 +39,8 @@ public class IoTServer {
             System.exit(-1);
         }
 
+        SERVER_AUTH = ServerAuth.getInstance(usersCypherPwdArg);
         ServerAuth.setApiKey(apiKeyArg);
-        ServerAuth.setCypherPwd(usersCypherPwdArg);
 
         System.setProperty("javax.net.ssl.keyStore", keystorePathArg);
         System.setProperty("javax.net.ssl.keyStorePassword", keystorePwdArg);

@@ -28,23 +28,22 @@ public class ServerAuth {
 
     private static final String USER_FILEPATH = "user.txt";
     private static String apiKey;
-    private static String cipherPwd;
 
     private UserStorage userStorage;
 
-    public static ServerAuth getInstance() {
-        ServerAuth instance = INSTANCE;
-        if (instance != null)
-            return instance;
+    public static ServerAuth getInstance(String cipherPwd) {
+        ServerAuth result = INSTANCE;
+        if (result != null)
+            return result;
 
         synchronized (ServerAuth.class) {
-            if (instance == null)
-                instance = new ServerAuth();
-            return instance;
+            if (INSTANCE == null)
+                INSTANCE = new ServerAuth(cipherPwd);
+            return INSTANCE;
         }
     }
 
-    private ServerAuth() {
+    private ServerAuth(String cipherPwd) {
         userStorage = new UserStorage(USER_FILEPATH, cipherPwd);
     }
 
@@ -77,10 +76,6 @@ public class ServerAuth {
 
     public static long generateNonce() {
         return ThreadLocalRandom.current().nextLong();
-    }
-
-    public static void setCypherPwd(String pwd) {
-        cipherPwd = pwd;
     }
 
     public static void setApiKey(String key) {

@@ -1,8 +1,6 @@
 package iotserver;
 
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileReader;
 import java.io.IOException;
 import java.util.Map;
 
@@ -27,7 +25,6 @@ public class ServerManager {
     private ServerManager(){
         domStorage = new DomainStorage(domainFilePath);
         devStorage = new DeviceStorage(deviceFilePath);
-        userStorage = new UserStorage(userFilePath, "");
 
         new File(imageDirectoryPath).mkdirs();
         new File(temperatureDirectoryPath).mkdirs();

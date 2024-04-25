@@ -82,19 +82,16 @@ public class ServerThread extends Thread {
         } catch (IOException e) {
             e.printStackTrace();
         } catch (ClassNotFoundException e) {
-            // TODO Auto-generated catch block
             e.printStackTrace();
         } catch (InvalidKeyException e) {
-            // TODO Auto-generated catch block
             e.printStackTrace();
         } catch (CertificateException e) {
-            // TODO Auto-generated catch block
             e.printStackTrace();
         } catch (NoSuchAlgorithmException e) {
-            // TODO Auto-generated catch block
             e.printStackTrace();
         } catch (SignatureException e) {
-            // TODO Auto-generated catch block
+            e.printStackTrace();
+        } catch (InterruptedException e) {
             e.printStackTrace();
         }
     }
@@ -107,7 +104,7 @@ public class ServerThread extends Thread {
 
     private void authUser() throws ClassNotFoundException, IOException,
             InvalidKeyException, CertificateException, NoSuchAlgorithmException,
-            SignatureException {
+            SignatureException, InterruptedException {
         System.out.println("Starting user auth.");
         ServerAuth sa = IoTServer.SERVER_AUTH;
         userID = (String) in.readObject();
@@ -127,6 +124,7 @@ public class ServerThread extends Thread {
         int emailResponseCode = sa.send2FAEmail(userID, twoFACode);
         // Handle bad email response code
         while (emailResponseCode != 200) {
+            Thread.sleep(6 * 1000);
             twoFACode = sa.generate2FACode();
             emailResponseCode = sa.send2FAEmail(userID, twoFACode);
         }
