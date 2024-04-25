@@ -73,6 +73,7 @@ public class ServerThread extends Thread {
                         break;
                     case MYDOMAINS:
                         getDomains(userID);
+                        break;
                     case STOP:
                         stopThread();
                         break;
