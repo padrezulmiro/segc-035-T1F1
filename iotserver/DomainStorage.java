@@ -3,19 +3,36 @@ package iotserver;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.security.GeneralSecurityException;
+import java.security.InvalidKeyException;
+import java.security.Key;
+import java.security.KeyStore;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
+import java.security.UnrecoverableKeyException;
+import java.security.cert.CertificateException;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import javax.crypto.Mac;
 
 import iohelper.Utils;
 
 public class DomainStorage {
+    private final String HASH_KEY_ALIAS = "files-hash-key";
+    private final String MAC_ALGORITHM = "HmacSHA256";
+    private final String HMAC_FILE_PATH = "domain-sha";
+
     private Map<String, Domain> domains;
     private File domainsFile;
     private Lock wLock;
@@ -34,7 +51,8 @@ public class DomainStorage {
         try {
             populateDomainsFromFile(devStorage);
         } catch (IOException e) {
-            // TODO Auto-generated catch block
+            e.printStackTrace();
+        } catch (GeneralSecurityException e) {
             e.printStackTrace();
         }
 
@@ -73,7 +91,7 @@ public class DomainStorage {
     /**
      * Retrieving all domain's temperature
      * @param domainName the domain to check
-     * @param devStorage 
+     * @param devStorage
      * @return Map<devFullID, encryptedTempStr> where temp is encrypted by
      *         the domain's secret key
      */
@@ -165,15 +183,48 @@ public class DomainStorage {
         } catch (FileNotFoundException e) {
             e.printStackTrace();
         }
+
+        try {
+            writeHmacToFile(computeFileHash(sb.toString()));
+        } catch (UnrecoverableKeyException |
+                 InvalidKeyException |
+                 KeyStoreException |
+                 NoSuchAlgorithmException |
+                 CertificateException |
+                 IOException e) {
+            e.printStackTrace();
+        }
     }
 
-    private void populateDomainsFromFile(DeviceStorage devStorage) throws IOException {
+    private void populateDomainsFromFile(DeviceStorage devStorage)
+            throws IOException, GeneralSecurityException {
         final char SP = ':';
         final char TAB = '\t';
 
         BufferedReader reader = new BufferedReader(new FileReader(domainsFile));
         String[] lines = (String[]) reader.lines().toArray(String[]::new);
         reader.close();
+
+        StringBuilder sb = new StringBuilder();
+        for (String s : lines) {
+            sb.append(s);
+        }
+
+        boolean validHmac = false;
+        try {
+            validHmac = verifyHmac(sb.toString());
+        } catch (UnrecoverableKeyException |
+                 InvalidKeyException |
+                 KeyStoreException |
+                 NoSuchAlgorithmException |
+                 CertificateException e) {
+            e.printStackTrace();
+        }
+
+        if (!validHmac) {
+            throw new GeneralSecurityException("Computed SHA-Hmac" +
+                    "differs from expected! Corrupted domains' file.");
+        }
 
         String currentDomainName = null;
         for (int i = 0; i < lines.length; i++) {
@@ -205,5 +256,34 @@ public class DomainStorage {
                 devStorage.saveDeviceTemperature(devUID, devDID, enTempStr, currentDomainName);
             }
         }
+    }
+
+    private byte[] computeFileHash(String body) throws KeyStoreException,
+            NoSuchAlgorithmException, CertificateException, IOException,
+            UnrecoverableKeyException, InvalidKeyException {
+        String keyStorePath = IoTServer.SERVER_CONFIG.keyStorePath();
+        String keyStorePwd = IoTServer.SERVER_CONFIG.keyStorePwd();
+
+        KeyStore ks = KeyStore
+            .getInstance(new File(keyStorePath), keyStorePwd.toCharArray());
+        Key key = ks.getKey(HASH_KEY_ALIAS, keyStorePwd.toCharArray());
+        Mac mac = Mac.getInstance(MAC_ALGORITHM);
+        mac.init(key);
+        mac.update(body.getBytes());
+        return mac.doFinal();
+    }
+
+    private boolean verifyHmac(String target) throws IOException,
+            UnrecoverableKeyException, InvalidKeyException, KeyStoreException,
+            NoSuchAlgorithmException, CertificateException {
+        byte[] hmac = Files.readAllBytes(Paths.get(HMAC_FILE_PATH));
+        return Arrays.equals(hmac, computeFileHash(target));
+    }
+
+    private void writeHmacToFile(byte[] hmac) throws IOException {
+        new PrintWriter(HMAC_FILE_PATH).close(); // Empties Hmac file
+        FileOutputStream fos = new FileOutputStream(HMAC_FILE_PATH);
+        fos.write(hmac);
+        fos.close();
     }
 }
