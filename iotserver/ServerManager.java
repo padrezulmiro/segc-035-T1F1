@@ -215,7 +215,7 @@ public class ServerManager {
                     return new ServerResponse(MessageCode.NODATA);
                 }    
                 String enDomkey = domStorage.getDeviceEncryptedDomainKey(domainName, requesterUID);
-                return new ServerResponse(MessageCode.OK, serverImgFolder+filepath, enDomkey);
+                return new ServerResponse(MessageCode.OK, filepath, enDomkey);
             }
 
             return new ServerResponse(MessageCode.NOPERM);
@@ -283,7 +283,7 @@ public class ServerManager {
         devStorage.writeLock();
         try {
             if (devStorage.deviceExists(userId, devId)) {
-                System.out.println("devid:" + Utils.fullID(userId, devId));
+                System.out.println("Authenticated device: " + Utils.fullID(userId, devId));
 
                 if (devStorage.isDeviceOnline(userId, devId)) {
                     System.out.println("dev is online");

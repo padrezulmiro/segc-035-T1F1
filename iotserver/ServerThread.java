@@ -122,7 +122,7 @@ public class ServerThread extends Thread {
         String devID = (String) in.readObject();
         ServerResponse sr = manager.getEncryptedDomainKeys(userID,devID); //
 
-        System.out.println("endomkeys:");
+        System.out.println("Endomkeys requested:");
         for (Map.Entry<String, String> entry : sr.allEncryptedDomainKeys().entrySet()) {
             System.out.println(entry.getKey() + ": " + entry.getValue());
         }
@@ -138,9 +138,11 @@ public class ServerThread extends Thread {
         for (int i = 0; i < numOfDom; i++) {
             // reading domain name
             String domainName = (String)in.readObject();
-            
+
+            String imgFolderPath = IMAGE_DIR_PATH + domainName + "/";
+            new File(imgFolderPath).mkdirs();
             // reading the file
-            String fullImgPath = IMAGE_DIR_PATH + "/" + domainName + "/" + filename;
+            String fullImgPath = imgFolderPath + filename;
             // long fileSize = (long)in.readObject();
             File f = new File(fullImgPath);
             FileHelper.receiveFile(f, in);
