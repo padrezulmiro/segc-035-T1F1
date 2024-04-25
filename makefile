@@ -10,6 +10,7 @@ ServerResponse \
 DomainStorage \
 DeviceStorage \
 UserStorage \
+ServerConfig
 
 BIN_DIR := bin
 DEVICE_DIR := iotclient

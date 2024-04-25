@@ -1,3 +1,5 @@
+package iotserver;
+
 public class ServerConfig {
     private static volatile ServerConfig instance;
 
