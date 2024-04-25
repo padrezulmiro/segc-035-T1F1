@@ -351,6 +351,11 @@ public class IoTDevice {
             //get (domain,encrypted keys) map
             HashMap<String,String> enDomkeysMap = getDeviceEncryptedDomainKeys();
 
+            if (enDomkeysMap.entrySet().size()==0){
+                System.out.println(MessageCode.NOREGISTER.getDesc());
+                return;
+            }
+            
             for (String dom : enDomkeysMap.keySet()){
 
                 // getting secret key
@@ -409,6 +414,10 @@ public class IoTDevice {
             //get (domain,encrypted keys) map
             HashMap<String,String> enDomkeysMap = getDeviceEncryptedDomainKeys();
 
+            if (enDomkeysMap.entrySet().size()==0){
+                System.out.println(MessageCode.NOREGISTER.getDesc());
+                return;
+            }
             System.out.println("enDomkeysMap:");
             for (Map.Entry<String, String> entry : enDomkeysMap.entrySet()) {
                 System.out.println(entry.getKey() + ": " + entry.getValue());
@@ -422,9 +431,7 @@ public class IoTDevice {
                 // use sKey to encrypt temp
                 byte[] encryptedTemp = CipherHelper.encryptAES_ECB(sKey, temp.getBytes());
                 out.writeObject(dom);                
-                String enString = new String (encryptedTemp);
-                System.out.println(enString);
-                out.writeObject(enString);
+                out.writeObject(encryptedTemp);
 
                 // receive message
                 MessageCode code = (MessageCode) in.readObject();

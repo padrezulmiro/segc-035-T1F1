@@ -73,6 +73,11 @@ public class DeviceStorage {
         updateDevicesFile();
     }
 
+    public String getDeviceString(String devFullID,String domainName){
+        // sb.append(SP+devices.get);
+        return devices.get(devFullID).toString(domainName);
+    }
+
     public String getDeviceTemperature(String userID, String devID, String domainName) {
         return devices.get(Utils.fullID(userID, devID)).getTemperature(domainName);
     }

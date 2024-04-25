@@ -74,7 +74,7 @@ public class ServerManager {
                 return new ServerResponse(MessageCode.NOK);
             }
 
-            domStorage.addDomain(domainName, ownerUID);
+            domStorage.addDomain(domainName, ownerUID, devStorage);
             return new ServerResponse(MessageCode.OK);
         } finally {
             domStorage.writeUnlock();
@@ -99,7 +99,7 @@ public class ServerManager {
             }
 
             boolean ret = domStorage
-                .addUserToDomain(newUserID, domainName, enDomkey);
+                .addUserToDomain(newUserID, domainName, enDomkey, devStorage);
             if (ret) {
                 return new ServerResponse(MessageCode.OK);
             } else {
@@ -130,8 +130,8 @@ public class ServerManager {
                 return new ServerResponse(MessageCode.DEVICEEXISTS);
             }
 
-            domStorage.addDeviceToDomain(userId, devId, domainName);
             devStorage.addDomainToDevice(userId, devId, domainName);
+            domStorage.addDeviceToDomain(userId, devId, domainName, devStorage);
             return new ServerResponse(MessageCode.OK);
         } finally {
             devStorage.writeUnlock();
@@ -142,22 +142,38 @@ public class ServerManager {
     public ServerResponse registerTemperature(String temperature, String userId,
             String devId, String domainName) {
         devStorage.writeLock();
+        domStorage.writeLock();
         try {
-            devStorage.saveDeviceTemperature(userId, devId, temperature, domainName);
-            return new ServerResponse(MessageCode.OK);
+            if(domStorage.isDeviceRegisteredInDomain(userId,devId,domainName)){
+                devStorage.saveDeviceTemperature(userId, devId, temperature, domainName);
+                domStorage.updateDomainsFile(devStorage);
+                return new ServerResponse(MessageCode.OK);
+            }else{
+                return new ServerResponse(MessageCode.NOK);
+            }
+
         } finally {
             devStorage.writeUnlock();
+            domStorage.writeUnlock();
         }
     }
 
     public ServerResponse registerImage(String filename, String userId,
             String devId, String domainName) {
         devStorage.writeLock();
+        domStorage.writeLock();
         try {
-            devStorage.saveDeviceImage(userId, devId, filename,domainName);
-            return new ServerResponse(MessageCode.OK);
+            if(domStorage.isDeviceRegisteredInDomain(userId,devId,domainName)){
+                devStorage.saveDeviceImage(userId, devId, filename,domainName);
+                domStorage.updateDomainsFile(devStorage);
+                return new ServerResponse(MessageCode.OK);
+            }else{
+                return new ServerResponse(MessageCode.NOK);
+            }
+
         } finally {
             devStorage.writeUnlock();
+            domStorage.writeUnlock();
         }
     }
 

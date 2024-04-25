@@ -18,6 +18,7 @@ public enum MessageCode {
     NODATA("NODATA # Device id has no published data."),
     NOUSER("NOUSER # User does not exist."),
     NOID("NOID # Device id does not exist."),
+    NOREGISTER(" # User is not registered to any domain."),
     USEREXISTS("USEREXISTS # User already exists in domain."),  
     DEVICEEXISTS("DEVICEEXISTS # Device already exists in domain."),  
     AU("AU # Authenticate the User user:pwd pair"),

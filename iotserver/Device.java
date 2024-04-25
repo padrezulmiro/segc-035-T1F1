@@ -18,7 +18,11 @@ public class Device {
            this.image = img;
            this.tempStr = tempStr;
         }
-    
+
+        @Override
+        public String toString() {
+            return "StoredData [image=" + image + ", tempStr=" + tempStr + "]";
+        }
         public void setImagePath(String image) {this.image = image;}
         public void setTempStr(String temp) {this.tempStr = temp;}
 
@@ -31,6 +35,8 @@ public class Device {
 
     public Device(String fullId) {
         this(fullId.split(":")[0], fullId.split(":")[1]);
+        this.online = false;
+        this.domainDataMap = new HashMap<>();
     }
 
     public Device(String userId, String devId) {
@@ -65,11 +71,15 @@ public class Device {
 
     public void registerInDomain(String domainName) {
         // registeredDomains.add(domainName);
-        domainDataMap.put(domainName, new StoredData(null,null));
+        domainDataMap.put(domainName, new StoredData("",""));
     }
 
     public void registerTemperature(String temperature, String domainName) {
-        StoredData sd = domainDataMap.get(domainName);
+        StoredData sd = domainDataMap.get(domainName); 
+        if(sd==null){
+            System.out.println("ITS NULL!!!!!");
+        }
+        System.out.println(sd.toString());
         sd.setTempStr(temperature);
     }
 

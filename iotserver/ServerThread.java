@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
+import java.util.Base64;
 import java.util.Map;
 
 import iotclient.MessageCode;
@@ -155,7 +156,8 @@ public class ServerThread extends Thread {
 
         for (int i = 0; i < numOfDom; i++) {
             String domainName = (String) in.readObject();
-            String encryptedTempStr = (String) in.readObject();
+            byte[] encryptedTempBytes = (byte[]) in.readObject();
+            String encryptedTempStr =  Base64.getEncoder().encodeToString(encryptedTempBytes);
             MessageCode res = manager
                 .registerTemperature(encryptedTempStr, this.userID, this.deviceID, domainName)
                 .responseCode();
