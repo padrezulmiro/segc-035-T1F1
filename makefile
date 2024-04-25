@@ -25,7 +25,6 @@ all:
 -C ./bin iohelper/FileHelper.class
 	jar cvfe IoTServer.jar iotserver.IoTServer -C ./bin $(SERVER_DIR) \
 -C ./bin iotclient/MessageCode.class -C ./bin iohelper/FileHelper.class
-	chmod +x ./attestation.sh
-	./attestation.sh
+
 clean:
 	rm -r bin; mkdir bin
