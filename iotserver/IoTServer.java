@@ -7,6 +7,7 @@ import javax.net.ssl.SSLServerSocket;
 import javax.net.ssl.SSLServerSocketFactory;
 
 public class IoTServer {
+    public static final ServerConfig SERVER_CONFIG = ServerConfig.getInstance();
     public static final ServerManager SERVER_MANAGER = ServerManager
         .getInstance();
 
@@ -37,6 +38,9 @@ public class IoTServer {
             System.err.println("Usage: IoTServer <port> <password-cifra> <keystore> <password-keystore> <2FA-APIKey>\n Please try again.");
             System.exit(-1);
         }
+
+        SERVER_CONFIG.setKeyStorePath(keystorePathArg);
+        SERVER_CONFIG.setKeyStorePwd(keystorePwdArg);
 
         System.setProperty("javax.net.ssl.keyStore", keystorePathArg);
         System.setProperty("javax.net.ssl.keyStorePassword", keystorePwdArg);
