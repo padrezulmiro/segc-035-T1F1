@@ -112,8 +112,9 @@ public class CipherHelper {
         int iterations = params.getIterations();
         KeySpec spec = new PBEKeySpec(pwd.toCharArray(), salt, iterations, 128);
         // SecretKey sKey = factory.generateSecret(spec);
-        SecretKey sKey = new SecretKeySpec(factory.generateSecret(spec).getEncoded(), "AES");
-        return sKey;
+        SecretKey sKey = factory.generateSecret(spec);
+        System.out.println(sKey.getEncoded().length); // Prints 16
+        return new SecretKeySpec(sKey.getEncoded(),"AES");
     }
 
 
@@ -160,6 +161,7 @@ public class CipherHelper {
                 throws NoSuchAlgorithmException, NoSuchPaddingException,
                        InvalidKeyException, IllegalBlockSizeException, BadPaddingException{
         Cipher c = Cipher.getInstance("AES/ECB/PKCS5Padding");
+        // System.out.println("double check: " + key.length());
         c.init(Cipher.ENCRYPT_MODE, key);
         return c.doFinal(plainData);
     }
@@ -211,12 +213,17 @@ public class CipherHelper {
      * @throws NoSuchAlgorithmException
      * @throws NoSuchPaddingException
      * @throws InvalidKeyException
+     * @throws BadPaddingException 
+     * @throws IllegalBlockSizeException 
      */
     public static Key unwrap(PrivateKey priKey, byte[] wrappedKey)
-        throws NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException{
-        Cipher c = Cipher.getInstance("RSA");
-        c.init(Cipher.UNWRAP_MODE, priKey);
-        return c.unwrap(wrappedKey, "PBKDF2WithHmacSHA256", Cipher.SECRET_KEY);
+        throws NoSuchAlgorithmException, NoSuchPaddingException,
+        InvalidKeyException, IllegalBlockSizeException, BadPaddingException{
+        Cipher c = Cipher.getInstance("RSA/ECB/PKCS1Padding");
+        // c.init(Cipher.UNWRAP_MODE, priKey);
+        // return c.unwrap(wrappedKey, "PBKDF2WithHmacSHA256", Cipher.SECRET_KEY);
+        c.init(Cipher.DECRYPT_MODE, priKey);
+        return  new SecretKeySpec ( c.doFinal(wrappedKey), "AES" );
     }
 
     /**
@@ -228,14 +235,16 @@ public class CipherHelper {
      * @throws NoSuchPaddingException
      * @throws InvalidKeyException
      * @throws IllegalBlockSizeException
+     * @throws BadPaddingException 
      */
     public static byte[] wrapSkey(PublicKey pubKey, Key sharedKey)
         throws NoSuchAlgorithmException, NoSuchPaddingException,
-                    InvalidKeyException, IllegalBlockSizeException{
-        Cipher c = Cipher.getInstance("RSA");
-        c.init(Cipher.WRAP_MODE, pubKey);
+                    InvalidKeyException, IllegalBlockSizeException, BadPaddingException{
+        Cipher c = Cipher.getInstance("RSA/ECB/PKCS1Padding");
+        c.init(Cipher.ENCRYPT_MODE, pubKey);
         // cifrar a chave secreta que queremos enviar
-        byte[] wrappedKey = c.wrap(sharedKey);
+        // byte[] wrappedKey = c.wrap(sharedKey);
+        byte[] wrappedKey = c.doFinal(sharedKey.getEncoded());
         return wrappedKey;
     }
 

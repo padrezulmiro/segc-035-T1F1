@@ -18,7 +18,6 @@ public class Device {
            this.image = img;
            this.tempStr = tempStr;
         }
-    
         public void setImagePath(String image) {this.image = image;}
         public void setTempStr(String temp) {this.tempStr = temp;}
 
@@ -31,6 +30,8 @@ public class Device {
 
     public Device(String fullId) {
         this(fullId.split(":")[0], fullId.split(":")[1]);
+        this.online = false;
+        this.domainDataMap = new HashMap<>();
     }
 
     public Device(String userId, String devId) {
@@ -65,11 +66,11 @@ public class Device {
 
     public void registerInDomain(String domainName) {
         // registeredDomains.add(domainName);
-        domainDataMap.put(domainName, new StoredData(null,null));
+        domainDataMap.put(domainName, new StoredData("",""));
     }
 
     public void registerTemperature(String temperature, String domainName) {
-        StoredData sd = domainDataMap.get(domainName);
+        StoredData sd = domainDataMap.get(domainName); 
         sd.setTempStr(temperature);
     }
 
@@ -121,7 +122,7 @@ public class Device {
             getImagePath(domain) : "";
 
         StringBuilder sb = new StringBuilder();
-        sb.append(fullId() + SP + temperature + SP + imagePath + NL);
+        sb.append(fullId() + SP + imagePath + SP + temperature + NL);
         return sb.toString();
     }
 }

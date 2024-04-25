@@ -278,11 +278,11 @@ public class IoTDevice {
                     File plainFile = new File(plainFilePath);
 
                     // getting secret key, using it to decrypt
-                    SecretKey skey = (SecretKey) CipherHelper.unwrap(privateKey, enDomkey.getBytes());
+                    SecretKey skey = (SecretKey) CipherHelper.unwrap(privateKey, Base64.getDecoder().decode(enDomkey));
                     CipherHelper.handleFileAES_ECB(Cipher.DECRYPT_MODE, skey, encryptedFile, plainFile);
                     encryptedFile.delete();
 
-                    System.out.println(MessageCode.OK.getDesc() + ", " + plainFile.length() + " (long)"); // TODO
+                    System.out.println(MessageCode.OK.getDesc() + ", received file " + plainFile.length() + " bytes"); 
                     break;
                 case NODATA:
                     System.out.println(MessageCode.NODATA.getDesc());
@@ -304,7 +304,7 @@ public class IoTDevice {
 
     private static void receiveTemps(String domain)
         throws InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException,
-               IllegalBlockSizeException, BadPaddingException {
+               IllegalBlockSizeException{
         try {
             out.writeObject(MessageCode.RT); // Send opcode
             out.writeObject(domain);
@@ -316,7 +316,7 @@ public class IoTDevice {
                     ServerResponse sResponse = (ServerResponse) in.readObject();
 
                     String enDomkey = sResponse.encryptedDomainKey();
-                    SecretKey sKey = (SecretKey) CipherHelper.unwrap(privateKey, enDomkey.getBytes());
+                    SecretKey sKey = (SecretKey) CipherHelper.unwrap(privateKey, Base64.getDecoder().decode(enDomkey));
 
 
                     HashMap<String, String> enTemps = (HashMap<String, String>) sResponse.temperatures();
@@ -332,7 +332,7 @@ public class IoTDevice {
                     HashMap<String, String> temps =  new HashMap<String, String>();
                     for (String dev : enTemps.keySet()){
                         String enTemp = enTemps.get(dev);
-                        String temp = new String(CipherHelper.decryptAES_ECB(sKey, enTemp.getBytes()));
+                        String temp = new String(CipherHelper.decryptAES_ECB(sKey, Base64.getDecoder().decode(enTemp)));
                         temps.put(dev, temp);
                     }
                     // TODO: write it to file
@@ -360,6 +360,9 @@ public class IoTDevice {
         } catch (IOException | ClassNotFoundException e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
+        } catch (BadPaddingException e) {
+            System.out.println(MessageCode.BADPASS.getDesc());
+            e.printStackTrace();
         }
     }
 
@@ -371,6 +374,11 @@ public class IoTDevice {
 
             //get (domain,encrypted keys) map
             HashMap<String,String> enDomkeysMap = getDeviceEncryptedDomainKeys();
+
+            if (enDomkeysMap.entrySet().size()==0){
+                System.out.println(MessageCode.NOTREGISTER.getDesc());
+                return;
+            }
 
             for (String dom : enDomkeysMap.keySet()){
 
@@ -384,6 +392,10 @@ public class IoTDevice {
 
                 // encrypt file with secret key
                 File plainFile = new File(imagePath);
+                if(!plainFile.exists()){
+                    System.out.println(MessageCode.FILENOTFOUND);
+                }
+
                 String enFilePath = plainFile.getParent() + "en_" + plainFile.getName();
                 File encryptedFile = new File(enFilePath);
                 // encrypt the image, this file is the one sent
@@ -430,10 +442,10 @@ public class IoTDevice {
             //get (domain,encrypted keys) map
             HashMap<String,String> enDomkeysMap = getDeviceEncryptedDomainKeys();
 
-            System.out.println("enDomkeysMap:");
-            for (Map.Entry<String, String> entry : enDomkeysMap.entrySet()) {
-                System.out.println(entry.getKey() + ": " + entry.getValue());
-            }            // for every domkey: unwrap with privatekey, encrypt temp with domain key, and then send
+            if (enDomkeysMap.entrySet().size()==0){
+                System.out.println(MessageCode.NOTREGISTER.getDesc());
+                return;
+            }
             for (String dom : enDomkeysMap.keySet()){
                 System.out.println("dom:"+dom);
                 // getting encrypted dom keys
@@ -443,9 +455,7 @@ public class IoTDevice {
                 // use sKey to encrypt temp
                 byte[] encryptedTemp = CipherHelper.encryptAES_ECB(sKey, temp.getBytes());
                 out.writeObject(dom);                
-                String enString = new String (encryptedTemp);
-                System.out.println(enString);
-                out.writeObject(enString);
+                out.writeObject(encryptedTemp);
 
                 // receive message
                 MessageCode code = (MessageCode) in.readObject();
@@ -465,7 +475,7 @@ public class IoTDevice {
             // TODO Auto-generated catch block
             e.printStackTrace();
         } catch(NumberFormatException e) {
-            System.err.println("Temperature needs to be a float.");
+            System.out.println(MessageCode.BADFLOAT.getDesc());
             return;
         } catch (InvalidKeyException e) {
             // TODO Auto-generated catch block

@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
+import java.util.Base64;
 import java.util.Map;
 
 import iotclient.MessageCode;
@@ -128,7 +129,7 @@ public class ServerThread extends Thread {
         String devID = (String) in.readObject();
         ServerResponse sr = manager.getEncryptedDomainKeys(userID,devID); //
 
-        System.out.println("endomkeys:");
+        System.out.println("Endomkeys requested:");
         for (Map.Entry<String, String> entry : sr.allEncryptedDomainKeys().entrySet()) {
             System.out.println(entry.getKey() + ": " + entry.getValue());
         }
@@ -144,9 +145,11 @@ public class ServerThread extends Thread {
         for (int i = 0; i < numOfDom; i++) {
             // reading domain name
             String domainName = (String)in.readObject();
-            
+
+            String imgFolderPath = IMAGE_DIR_PATH + domainName + "/";
+            new File(imgFolderPath).mkdirs();
             // reading the file
-            String fullImgPath = IMAGE_DIR_PATH + "/" + domainName + "/" + filename;
+            String fullImgPath = imgFolderPath + filename;
             // long fileSize = (long)in.readObject();
             File f = new File(fullImgPath);
             FileHelper.receiveFile(f, in);
@@ -162,7 +165,8 @@ public class ServerThread extends Thread {
 
         for (int i = 0; i < numOfDom; i++) {
             String domainName = (String) in.readObject();
-            String encryptedTempStr = (String) in.readObject();
+            byte[] encryptedTempBytes = (byte[]) in.readObject();
+            String encryptedTempStr =  Base64.getEncoder().encodeToString(encryptedTempBytes);
             MessageCode res = manager
                 .registerTemperature(encryptedTempStr, this.userID, this.deviceID, domainName)
                 .responseCode();
