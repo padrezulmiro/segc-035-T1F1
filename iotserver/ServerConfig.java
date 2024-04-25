@@ -4,7 +4,6 @@ public class ServerConfig {
     private String keyStorePath;
     private String keyStorePwd;
 
-
     public static ServerConfig getInstance() {
         ServerConfig singleton = instance;
         if (singleton != null) return singleton;
@@ -23,5 +22,13 @@ public class ServerConfig {
 
     public void setKeyStorePwd(String pwd) {
         keyStorePwd = pwd;
+    }
+
+    public String keyStorePath() {
+        return keyStorePath;
+    }
+
+    public String keyStorePwd() {
+        return keyStorePwd;
     }
 }
