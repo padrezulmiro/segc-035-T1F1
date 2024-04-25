@@ -25,8 +25,10 @@ import java.security.cert.CertificateException;
 import java.security.spec.InvalidKeySpecException;
 import java.util.Base64;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Scanner;
+import java.util.Set;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
@@ -210,6 +212,9 @@ public class IoTDevice {
                     receiveImage(cmds[1]);
                 }
                 break;
+            case "MYDOMAINS":
+                showDomains();
+                break;
             case "H":
             case "HELP":
                 printMenu();
@@ -217,6 +222,22 @@ public class IoTDevice {
             default:
                 System.out.println("That command does not exist.");
                 break;
+        }
+    }
+
+    private static void showDomains() throws InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, ClassNotFoundException, IOException {
+        out.writeObject(MessageCode.MYDOMAINS);
+        ServerResponse sResponse = (ServerResponse) in.readObject();
+        Set<String> doms = sResponse.domains();
+            if (doms.isEmpty()){
+                System.out.println("This device doesn't belong to any domains.");
+            } else {
+                System.out.println("This device belongs to the following domains:");
+                Iterator itr = doms.iterator();
+ 
+                while (itr.hasNext()) {
+                    System.out.println("\t - " + itr.next());
+            }
         }
     }
 
@@ -635,6 +656,7 @@ public class IoTDevice {
                 + " do domínio <dm>, desde que o utilizador tenha permissões.");
         System.out.println("RI <user-id>:<dev_id> # Receber o ficheiro Imagem do dispositivo "
                 + "<user-id>:<dev_id> do servidor, desde que o utilizador tenha permissões.");
+        System.out.println("MYDOMAINS # Imprime a lista de domínios a que o dispositivo pertence.");
         System.out.println("HELP # Monstrar este menu.");
 
     }
