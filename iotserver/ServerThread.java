@@ -70,6 +70,8 @@ public class ServerThread extends Thread {
                     case RI:
                         getImage();
                         break;
+                    case MYDOMAINS:
+                        getDomains(userID);
                     case STOP:
                         stopThread();
                         break;
@@ -81,6 +83,11 @@ public class ServerThread extends Thread {
             // TODO Auto-generated catch block
             e.printStackTrace();
         }
+    }
+
+    private void getDomains(String userID) throws IOException {
+        ServerResponse sr = manager.getUserDomains(userID);
+        out.writeObject(sr);
     }
 
     private void stopThread() {
