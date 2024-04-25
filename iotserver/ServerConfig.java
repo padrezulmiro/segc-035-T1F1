@@ -11,7 +11,7 @@ public class ServerConfig {
         if (singleton != null) return singleton;
 
         synchronized(ServerConfig.class) {
-            if (instance == null) return new ServerConfig();
+            if (instance == null) instance = new ServerConfig();
             return instance;
         }
     }
