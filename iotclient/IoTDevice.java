@@ -257,7 +257,7 @@ public class IoTDevice {
                     File plainFile = new File(plainFilePath);
 
                     // getting secret key, using it to decrypt
-                    SecretKey skey = (SecretKey) CipherHelper.unwrap(privateKey, enDomkey.getBytes());
+                    SecretKey skey = (SecretKey) CipherHelper.unwrap(privateKey, Base64.getDecoder().decode(enDomkey));
                     CipherHelper.handleFileAES_ECB(Cipher.DECRYPT_MODE, skey, encryptedFile, plainFile);
                     encryptedFile.delete();
 
@@ -295,7 +295,7 @@ public class IoTDevice {
                     ServerResponse sResponse = (ServerResponse) in.readObject();
 
                     String enDomkey = sResponse.encryptedDomainKey();
-                    SecretKey sKey = (SecretKey) CipherHelper.unwrap(privateKey, enDomkey.getBytes());
+                    SecretKey sKey = (SecretKey) CipherHelper.unwrap(privateKey, Base64.getDecoder().decode(enDomkey));
 
 
                     HashMap<String, String> enTemps = (HashMap<String, String>) sResponse.temperatures();
@@ -311,7 +311,7 @@ public class IoTDevice {
                     HashMap<String, String> temps =  new HashMap<String, String>();
                     for (String dev : enTemps.keySet()){
                         String enTemp = enTemps.get(dev);
-                        String temp = new String(CipherHelper.decryptAES_ECB(sKey, enTemp.getBytes()));
+                        String temp = new String(CipherHelper.decryptAES_ECB(sKey, Base64.getDecoder().decode(enTemp)));
                         temps.put(dev, temp);
                     }
                     // TODO: write it to file
