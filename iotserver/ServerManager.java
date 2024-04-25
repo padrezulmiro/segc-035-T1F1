@@ -227,6 +227,19 @@ public class ServerManager {
             domStorage.readUnlock();
         }
     }
+   
+    public ServerResponse getUserDomains(String user){
+        domStorage.readLock();
+        devStorage.readLock();
+        try {
+
+            Set<String> doms= domStorage.getUserDomains(user);
+            return new ServerResponse(MessageCode.OK, doms);
+        } finally {
+            devStorage.readUnlock();
+            domStorage.readUnlock();
+        }
+    }
 
     /*
      *AUTHENTICATION====================================================================================================================
