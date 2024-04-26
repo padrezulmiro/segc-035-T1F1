@@ -77,9 +77,6 @@ public class Domain {
             sb.append(SP + enDomkeyMap.get(registeredUser) + NL);
         }
         
-        for (String devFullId : devices) {
-            sb.append(TAB + "" + TAB + devFullId + NL);
-        }
 
         return sb.toString();
     }

@@ -61,25 +61,25 @@ public class DomainStorage {
         rLock = rwLock.readLock();
     }
 
-    public void addDomain(String domainName, String ownerUID) {
+    public void addDomain(String domainName, String ownerUID, DeviceStorage deviceStorage) {
         Domain domain = new Domain(domainName, ownerUID);
         domains.put(domainName, domain);
-        updateDomainsFile();
+        updateDomainsFile(deviceStorage);
     }
 
     public boolean addUserToDomain(String newUserID,
-            String domainName, String enDomkey) {
+            String domainName, String enDomkey, DeviceStorage deviceStorage) {
         Domain domain = domains.get(domainName);
         boolean ret = domain.registerUser(newUserID, enDomkey);
-        if (ret) updateDomainsFile();
+        if (ret) updateDomainsFile(deviceStorage);
         return ret;
     }
 
     public boolean addDeviceToDomain(String userID, String devID,
-            String domainName) {
+            String domainName, DeviceStorage deviceStorage) {
         Domain domain = domains.get(domainName);
         boolean ret = domain.registerDevice(Utils.fullID(userID, devID));
-        if (ret) updateDomainsFile();
+        if (ret) updateDomainsFile(deviceStorage);
         return ret;
     }
 
@@ -171,10 +171,19 @@ public class DomainStorage {
         return null;
     }
 
-    private void updateDomainsFile(){
+    // forgive me god of good OOP  practice for i have sinned
+    public void updateDomainsFile(DeviceStorage devStorage){
         StringBuilder sb = new StringBuilder();
+        final char TAB = '\t';
+
         for (Domain domain : domains.values()) {
             sb.append(domain.toString());
+
+            Set<String> devices = domain.getDevices();
+            for (String dev : devices){
+                sb.append(TAB + "" + TAB);
+                sb.append(devStorage.getDeviceString(dev,domain.getName()));
+            }
         }
 
         try (PrintWriter pw = new PrintWriter(domainsFile)) {
@@ -252,8 +261,10 @@ public class DomainStorage {
                 domains
                 .get(currentDomainName)
                 .registerDevice(Utils.fullID(devUID, devDID));
+                devStorage.addDomainToDevice(devUID, devDID, currentDomainName);
                 devStorage.saveDeviceImage(devUID, devDID, imgPath, currentDomainName);
                 devStorage.saveDeviceTemperature(devUID, devDID, enTempStr, currentDomainName);
+                System.out.println("now for something entirely different:" + devStorage.getDeviceString(Utils.fullID(devUID, devDID),currentDomainName));
             }
         }
     }

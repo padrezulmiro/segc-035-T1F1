@@ -7,6 +7,7 @@ import java.io.InputStream;
 import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 import iotclient.MessageCode;
 
@@ -18,6 +19,7 @@ public class ServerResponse implements Serializable{
     private Map<String,String> temperatures; // devFullID, encryptedTempID
     private String encryptedDomainKey;
     private HashMap<String,String> allEncryptedDomainKeys;
+    private Set<String> domains;
 
     public ServerResponse(MessageCode code) {
         this.code = code;
@@ -49,6 +51,10 @@ public class ServerResponse implements Serializable{
         this.temperatures = temps;
         this.encryptedDomainKey = enDomkey;
     }
+    public ServerResponse(MessageCode code, Set<String> domains) {
+        this.code = code;
+        this.domains = domains;
+    }
 
     public MessageCode responseCode() {
         return code;
@@ -76,5 +82,9 @@ public class ServerResponse implements Serializable{
 
     public HashMap<String,String> allEncryptedDomainKeys() {
         return allEncryptedDomainKeys;
+    }
+
+    public Set<String> domains(){
+        return domains;
     }
 }
