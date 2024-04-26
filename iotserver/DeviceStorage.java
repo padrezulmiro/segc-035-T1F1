@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
@@ -48,28 +49,37 @@ public class DeviceStorage {
         updateDevicesFile();
     }
 
+    public Set<String> getDeviceDomains(String userID, String devID){
+        return devices.get(Utils.fullID(userID, devID)).getDomains();
+    }
+
     public void addDomainToDevice(String userID, String devID,
             String domainName) {
         devices.get(Utils.fullID(userID, devID)).registerInDomain(domainName);
         updateDevicesFile();
     }
 
-    public void saveDeviceImage(String userID, String devID, String imgPath) {
-        devices.get(Utils.fullID(userID, devID)).registerImage(imgPath);
+    public void saveDeviceImage(String userID, String devID, String imgPath, String domainName) {
+        devices.get(Utils.fullID(userID, devID)).registerImage(imgPath, domainName);
         updateDevicesFile();
     }
 
-    public String getDeviceImage(String userID, String devID) {
-        return devices.get(Utils.fullID(userID, devID)).getImagePath();
+    public String getDeviceImage(String userID, String devID, String domainName) {
+        return devices.get(Utils.fullID(userID, devID)).getImagePath(domainName);
     }
 
-    public void saveDeviceTemperature(String userID, String devID, float temp) {
-        devices.get(Utils.fullID(userID, devID)).registerTemperature(temp);
+    public void saveDeviceTemperature(String userID, String devID, String temp, String domainName) {
+        devices.get(Utils.fullID(userID, devID)).registerTemperature(temp, domainName);
         updateDevicesFile();
     }
 
-    public float getDeviceTemperature(String userID, String devID) {
-        return devices.get(Utils.fullID(userID, devID)).getTemperature();
+    public String getDeviceString(String devFullID,String domainName){
+        // sb.append(SP+devices.get);
+        return devices.get(devFullID).toString(domainName);
+    }
+
+    public String getDeviceTemperature(String userID, String devID, String domainName) {
+        return devices.get(Utils.fullID(userID, devID)).getTemperature(domainName);
     }
 
     public boolean deviceExists(String userID, String devID) {
@@ -129,13 +139,14 @@ public class DeviceStorage {
             String[] tokens = Utils.split(lines[i], SP);
             String uid = tokens[0];
             String did = tokens[1];
-            Float temperature = null;
-            if(!tokens[2].equals("")){temperature = Float.parseFloat(tokens[2]);}
-            String imagePath = tokens[3];;
+            // Float temperature = null;
+            // if(!tokens[2].equals("")){temperature = Float.parseFloat(tokens[2]);}
+            // String imagePath = tokens[3];;
 
             Device device = new Device(uid, did);
-            if(temperature != null){device.registerTemperature(temperature);}
-            if(imagePath!=null) device.registerImage(imagePath);
+            // devices.txt dont need anything 
+            // if(temperature != null){device.registerTemperature(temperature);}
+            // if(imagePath!=null) device.registerImage(imagePath);
 
             devices.put(Utils.fullID(uid, did), device);
         }

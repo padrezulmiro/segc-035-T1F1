@@ -26,7 +26,7 @@ import iohelper.Utils;
 public class ServerAuth {
     private static volatile ServerAuth INSTANCE;
 
-    private static final String USER_FILEPATH = "user.txt";
+    private static final String USER_FILEPATH = "./output/server/user.txt";
     private static String apiKey;
 
     private UserStorage userStorage;
@@ -83,7 +83,7 @@ public class ServerAuth {
     }
 
     public static int generate2FACode() {
-        return ThreadLocalRandom.current().nextInt(0, 100000);
+        return ThreadLocalRandom.current().nextInt(10000, 100000);
     }
 
     public static int send2FAEmail(String emailAddress, int code) {

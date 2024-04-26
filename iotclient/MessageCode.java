@@ -18,6 +18,10 @@ public enum MessageCode {
     NODATA("NODATA # Device id has no published data."),
     NOUSER("NOUSER # User does not exist."),
     NOID("NOID # Device id does not exist."),
+    NOTREGISTER("NOTREGISTER # User is not registered to any domain."),
+    FILENOTFOUND("FILENOTFOUND # The file does not exist"),
+    BADFLOAT("BADFLOAT # Temperature needs to be a float."),
+    BADPASS("BADPASS # Decryption failed, wrong domain key is registered for this device."),
     USEREXISTS("USEREXISTS # User already exists in domain."),  
     DEVICEEXISTS("DEVICEEXISTS # Device already exists in domain."),  
     AU("AU # Authenticate the User user:pwd pair"),
@@ -30,6 +34,7 @@ public enum MessageCode {
     EI("EI <filename.jpg> # Enviar Image <filename.jpg> to the server"),
     RT("RT <dm> # Receive the latest Temperatures for every device of domain <dm>, as long as user has permission"),
     RI("RI <user-id>:<dev-id> # Receive Image file from <user-id>:<dev-id>, as long as user has permission."),
+    MYDOMAINS("MYDOMAINS # Show list of domains that the device belongs to"),
     STOP("STOP # Client has been shut down."),
     EMAIL_FAIL("EMAIL_FAIL # Email sending API failed."), 
     WRONG_NONCE("WRONG_NONCE # ");

@@ -7,8 +7,8 @@ import javax.net.ssl.SSLServerSocket;
 import javax.net.ssl.SSLServerSocketFactory;
 
 public class IoTServer {
-    public static final ServerManager SERVER_MANAGER = ServerManager
-        .getInstance();
+    public static ServerConfig SERVER_CONFIG;
+    public static ServerManager SERVER_MANAGER;
     public static ServerAuth SERVER_AUTH;
 
     private static final int ARG_NUM = 5;
@@ -39,12 +39,19 @@ public class IoTServer {
             System.exit(-1);
         }
 
-        SERVER_AUTH = ServerAuth.getInstance(usersCypherPwdArg);
-        ServerAuth.setApiKey(apiKeyArg);
-
         System.setProperty("javax.net.ssl.keyStore", keystorePathArg);
         System.setProperty("javax.net.ssl.keyStorePassword", keystorePwdArg);
         System.setProperty("javax.net.ssl.keyStoreType", "JCEKS");
+
+        SERVER_AUTH = ServerAuth.getInstance(usersCypherPwdArg);
+        ServerAuth.setApiKey(apiKeyArg);
+
+        SERVER_CONFIG = ServerConfig.getInstance();
+        SERVER_CONFIG.setKeyStorePath(keystorePathArg);
+        SERVER_CONFIG.setKeyStorePwd(keystorePwdArg);
+
+
+        SERVER_MANAGER = ServerManager.getInstance();
 
         IoTServer server = new IoTServer(portArg,
                 keystorePathArg, keystorePwdArg, apiKeyArg);
