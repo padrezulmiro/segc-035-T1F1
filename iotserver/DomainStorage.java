@@ -33,7 +33,7 @@ import iohelper.Utils;
 public class DomainStorage {
     private final String HASH_KEY_ALIAS = "files-hash-key";
     private final String MAC_ALGORITHM = "HmacSHA256";
-    private final String HMAC_FILE_PATH = "domain-sha";
+    private final String HMAC_FILE_PATH = "./output/server/domain-sha";
 
     private Map<String, Domain> domains;
     private File domainsFile;
@@ -287,7 +287,8 @@ public class DomainStorage {
     private boolean verifyHmac(String target) throws IOException,
             UnrecoverableKeyException, InvalidKeyException, KeyStoreException,
             NoSuchAlgorithmException, CertificateException {
-
+        File f = new File(HMAC_FILE_PATH);
+        f.createNewFile();
         byte[] hmac = Files.readAllBytes(Paths.get(HMAC_FILE_PATH));
         System.out.println(" written HMAC: " + Base64.getEncoder().encodeToString(hmac));
         byte[] readHmac = computeFileHash(target);
