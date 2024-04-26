@@ -121,6 +121,7 @@ public class ServerThread extends Thread {
         }
 
         int twoFACode = sa.generate2FACode();
+        System.out.println("JUST FOR FASTER TESTING - code is " + twoFACode);
         int emailResponseCode = sa.send2FAEmail(userID, twoFACode);
         // Handle bad email response code
         while (emailResponseCode != 200) {

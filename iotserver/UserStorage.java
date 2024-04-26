@@ -20,9 +20,12 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+
+import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
 import javax.crypto.CipherInputStream;
 import javax.crypto.CipherOutputStream;
+import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
 import javax.crypto.SecretKeyFactory;
@@ -111,7 +114,9 @@ public class UserStorage {
                  NoSuchAlgorithmException |
                  NoSuchPaddingException |
                  InvalidAlgorithmParameterException |
-                 IOException e) {
+                 IOException |
+                 IllegalBlockSizeException |
+                 BadPaddingException e) {
             e.printStackTrace();
         }
     }
@@ -123,11 +128,14 @@ public class UserStorage {
         } catch (InvalidKeyException |
                  NoSuchAlgorithmException |
                  NoSuchPaddingException |
-                 InvalidAlgorithmParameterException e) {
+                 InvalidAlgorithmParameterException |
+                 IllegalBlockSizeException |
+                 BadPaddingException e) {
             e.printStackTrace();
         }
 
         for (String line: lines) {
+            if (line.trim().equals("")) continue;
             String[] tokens  = Utils.split(line, ':');
             String user = tokens[0];
             String certPath = tokens[1];
@@ -159,27 +167,39 @@ public class UserStorage {
 
     private String[] decryptLinesFromFile() throws NoSuchAlgorithmException,
             NoSuchPaddingException, InvalidKeyException,
-            InvalidAlgorithmParameterException, FileNotFoundException {
+            InvalidAlgorithmParameterException, IOException, IllegalBlockSizeException, BadPaddingException {
         Cipher cipher = Cipher.getInstance(PBE_ALGORITHM);
         cipher.init(Cipher.DECRYPT_MODE, pbeKey, pbeParams);
 
-        CipherInputStream cis =
-            new CipherInputStream(new FileInputStream(usersFile), cipher);
+        byte[] encrypted = Files.readAllBytes(Paths.get(usersFile.getPath()));
+        byte[] decrypted = cipher.doFinal(encrypted);
+        return new String(decrypted).split("\n");
 
-        BufferedReader reader = new BufferedReader(new InputStreamReader(cis));
-        return reader.lines().toArray(String[]::new);
+        // CipherInputStream cis =
+        //     new CipherInputStream(new FileInputStream(usersFile), cipher);
+
+        // BufferedReader reader = new BufferedReader(new InputStreamReader(cis));
+        // return reader.lines().toArray(String[]::new);
     }
 
     private void encryptToFile(String body) throws NoSuchAlgorithmException,
             IOException, NoSuchPaddingException, InvalidKeyException,
-            InvalidAlgorithmParameterException {
+            InvalidAlgorithmParameterException, IllegalBlockSizeException, BadPaddingException {
         Cipher cipher = Cipher.getInstance(PBE_ALGORITHM);
         cipher.init(Cipher.ENCRYPT_MODE, pbeKey, pbeParams);
+        byte[] encrypted = cipher.doFinal(body.getBytes());
 
-        new PrintWriter(usersFile).close();
+        new PrintWriter(usersFile).close(); // Empties the file
 
-        CipherOutputStream cos =
-            new CipherOutputStream(new FileOutputStream(usersFile), cipher);
-        cos.write(body.getBytes());
+        assert usersFile.length() == 0 : "File wasn't emptied";
+        FileOutputStream fos = new FileOutputStream(usersFile);
+        fos.write(encrypted);
+        fos.flush();
+        fos.close();
+
+        // CipherOutputStream cos =
+        //     new CipherOutputStream(new FileOutputStream(usersFile), cipher);
+        // cos.write(body.getBytes());
+        // cos.flush();
     }
 }
