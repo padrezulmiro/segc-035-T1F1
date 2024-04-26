@@ -39,16 +39,18 @@ public class IoTServer {
             System.exit(-1);
         }
 
-        SERVER_CONFIG = ServerConfig.getInstance();
-        SERVER_CONFIG.setKeyStorePath(keystorePathArg);
-        SERVER_CONFIG.setKeyStorePwd(keystorePwdArg);
-
         System.setProperty("javax.net.ssl.keyStore", keystorePathArg);
         System.setProperty("javax.net.ssl.keyStorePassword", keystorePwdArg);
         System.setProperty("javax.net.ssl.keyStoreType", "JCEKS");
 
-        SERVER_AUTH = ServerAuth.getInstance();
+        SERVER_AUTH = ServerAuth.getInstance(usersCypherPwdArg);
         ServerAuth.setApiKey(apiKeyArg);
+
+        SERVER_CONFIG = ServerConfig.getInstance();
+        SERVER_CONFIG.setKeyStorePath(keystorePathArg);
+        SERVER_CONFIG.setKeyStorePwd(keystorePwdArg);
+
+
         SERVER_MANAGER = ServerManager.getInstance();
 
         IoTServer server = new IoTServer(portArg,

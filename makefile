@@ -10,6 +10,7 @@ ServerResponse \
 DomainStorage \
 DeviceStorage \
 UserStorage \
+ServerAuth \
 ServerConfig
 
 BIN_DIR := bin
