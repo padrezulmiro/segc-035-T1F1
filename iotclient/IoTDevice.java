@@ -205,7 +205,7 @@ public class IoTDevice {
                         out.writeObject(cert);
 
                         // Receive confirmation
-                        // TODO handle receiving WRONG_NONCE
+                        // handle WRONG_NONCE
                         if (!in.readObject().equals(MessageCode.OK)) {
                             System.exit(-1);
                         }
