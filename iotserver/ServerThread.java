@@ -78,7 +78,7 @@ public class ServerThread extends Thread {
                         getImage();
                         break;
                     case MYDOMAINS:
-                        getDomains(userID);
+                        getDomains(userID,deviceID);
                         break;
                     case STOP:
                         stopThread();
@@ -102,8 +102,8 @@ public class ServerThread extends Thread {
         }
     }
 
-    private void getDomains(String userID) throws IOException {
-        ServerResponse sr = manager.getUserDomains(userID);
+    private void getDomains(String userID,String deviceID) throws IOException {
+        ServerResponse sr = manager.getDeviceDomains(userID,deviceID);
         out.writeObject(sr);
     }
 
