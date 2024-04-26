@@ -206,7 +206,11 @@ public class DomainStorage {
         }
 
         try {
-            writeHmacToFile(computeFileHash(sb.toString()));
+            CipherHelper.writeHmacToFile(
+                CipherHelper.computeFileHash(sb.toString(),
+                            HASH_KEY_ALIAS,MAC_ALGORITHM),
+                HMAC_FILE_PATH
+                );
         } catch (UnrecoverableKeyException |
                  InvalidKeyException |
                  KeyStoreException |
@@ -236,7 +240,8 @@ public class DomainStorage {
         boolean validHmac = false;
         try {
             if (domainsFile.exists() && domainsFile.length()!=0){
-                validHmac = verifyHmac(sb.toString());
+                validHmac = CipherHelper.verifyHmac(sb.toString(),
+                            HASH_KEY_ALIAS, MAC_ALGORITHM, HMAC_FILE_PATH);
             }else{
                 validHmac = true;
             }
@@ -280,38 +285,5 @@ public class DomainStorage {
                 devStorage.saveDeviceTemperature(devUID, devDID, enTempStr, currentDomainName);
             }
         }
-    }
-
-    private byte[] computeFileHash(String body) throws KeyStoreException,
-            NoSuchAlgorithmException, CertificateException, IOException,
-            UnrecoverableKeyException, InvalidKeyException {
-        String keyStorePath = ServerConfig.getInstance().keyStorePath();
-        String keyStorePwd = ServerConfig.getInstance().keyStorePwd();
-        KeyStore ks = CipherHelper.getKeyStore(keyStorePath, keyStorePwd);
-        Key key = ks.getKey(HASH_KEY_ALIAS, keyStorePwd.toCharArray());
-        Mac mac = Mac.getInstance(MAC_ALGORITHM);
-        mac.init(key);
-        mac.update(body.getBytes());
-        byte[] ret = mac.doFinal();
-        return ret;
-    }
-
-    private boolean verifyHmac(String target) throws IOException,
-            UnrecoverableKeyException, InvalidKeyException, KeyStoreException,
-            NoSuchAlgorithmException, CertificateException {
-        File f = new File(HMAC_FILE_PATH);
-        f.createNewFile();
-        byte[] hmac = Files.readAllBytes(Paths.get(HMAC_FILE_PATH));
-        System.out.println(" written HMAC: " + Base64.getEncoder().encodeToString(hmac));
-        byte[] readHmac = computeFileHash(target);
-        System.out.println("computed HMAC: " + Base64.getEncoder().encodeToString(readHmac));
-        return Arrays.equals(hmac, readHmac);
-    }
-
-    private void writeHmacToFile(byte[] hmac) throws IOException {
-        new PrintWriter(HMAC_FILE_PATH).close(); // Empties Hmac file
-        FileOutputStream fos = new FileOutputStream(HMAC_FILE_PATH);
-        fos.write(hmac);
-        fos.close();
     }
 }
