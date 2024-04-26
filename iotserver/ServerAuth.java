@@ -9,6 +9,8 @@ import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.ByteBuffer;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.security.InvalidKeyException;
 import java.security.KeyStoreException;
 import java.security.MessageDigest;
@@ -178,14 +180,15 @@ public class ServerAuth {
         File hmac = new File(HMAC_FILE_PATH);
         boolean validHmac = false;
         boolean validDigest = MessageDigest.isEqual(hash, computedHash);
+        String encodedAttestationFile = Base64.getEncoder().encodeToString(Files.readAllBytes(Paths.get(clientExecPath)));
         try {
             if (hmac.exists()){ // if there is a hmac check
-                validHmac = CipherHelper.verifyHmac(Base64.getEncoder().encodeToString(hash),
+                validHmac = CipherHelper.verifyHmac(encodedAttestationFile,
                                          HASH_KEY_ALIAS, MAC_ALGORITHM, HMAC_FILE_PATH);
             }else if (validDigest){ // if it's the first time + digest valid
                 validHmac = true;
                 CipherHelper.writeHmacToFile(
-                    CipherHelper.computeFileHash(Base64.getEncoder().encodeToString(hash),
+                    CipherHelper.computeFileHash(encodedAttestationFile,
                                         HASH_KEY_ALIAS, MAC_ALGORITHM), HMAC_FILE_PATH);
             }
 
