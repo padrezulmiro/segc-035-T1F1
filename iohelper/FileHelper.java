@@ -2,14 +2,25 @@ package iohelper;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.OutputStream;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
+import java.util.Map;
+
+import javax.crypto.Cipher;
+import javax.crypto.NoSuchPaddingException;
+import javax.crypto.SecretKey;
 
 public class FileHelper {
     // private ObjectOutputStream out;
@@ -25,12 +36,11 @@ public class FileHelper {
      * 
      * @param path File path
      */
-    public static void sendFile(String path,ObjectOutputStream out) {
-        File f = new File(path);
+    public static void sendFile(File f,ObjectOutputStream out) {
         long fileSize = f.length();
         try {
             // Send file name
-            out.writeObject(f.getName());
+            // out.writeObject(f.getName());
             // Send file size
             out.writeObject(fileSize);
 
@@ -59,9 +69,9 @@ public class FileHelper {
      * @param fileSize File size.
      * @param path File path
      */
-    public static void receiveFile(Long fileSize, String path, ObjectInputStream in) {
+    public static void receiveFile(File f, ObjectInputStream in) {
         try {
-            File f = new File(path);
+            long fileSize = (long) in.readObject(); // Read file size
             f.createNewFile();
 
             FileOutputStream fout = new FileOutputStream(f);
@@ -76,14 +86,27 @@ public class FileHelper {
                 output.flush();
                 fout.flush();
                 bytesWritten += bytesRead;
-                System.out.println(bytesWritten);
             }
             output.close();
             fout.close();
-        } catch (IOException e) {
+        } catch (IOException | ClassNotFoundException e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
         }
     }
-    
+
+    /*
+     * Given a file, it will just write on in there baby
+     */
+    public static BufferedWriter createFileWriter(File f) throws IOException{
+        f.createNewFile();
+        BufferedWriter bw = new BufferedWriter(new FileWriter(f));
+        return bw;
+    }    
+
+    public static BufferedReader createFileReader(File f) throws IOException{
+        f.createNewFile();
+        BufferedReader br = new BufferedReader(new FileReader(f));
+        return br;
+    }
 }

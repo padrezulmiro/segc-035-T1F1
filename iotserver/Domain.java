@@ -1,5 +1,6 @@
 package iotserver;
 
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -8,19 +9,22 @@ public class Domain {
     private String ownerId;
     private Set<String> registeredUsers;
     private Set<String> devices;
+    private HashMap<String, String> enDomkeyMap;
 
     public Domain(String name, String ownerId) {
         this.name = name;
         this.ownerId = ownerId;
         this.registeredUsers = new HashSet<>();
         this.devices = new HashSet<>();
+        this.enDomkeyMap = new HashMap<>();
     }
 
-    public boolean registerUser(String userId) {
-        if (this.isOwner(userId)){
-            return false;
+    public boolean registerUser(String userId, String enDomkey) {
+        if(registeredUsers.add(userId)){
+            registerEncryptedDomainKey(userId, enDomkey);
+            return true;
         }
-        return registeredUsers.add(userId);
+        return false;
     }
 
     public boolean isOwner(String userId) {
@@ -28,7 +32,7 @@ public class Domain {
     }
 
     public boolean isRegistered(String userId) {
-        return registeredUsers.contains(userId) || isOwner(userId);
+        return registeredUsers.contains(userId); // || isOwner(userId);
     }
 
     public boolean registerDevice(String deviceFullID) {
@@ -51,6 +55,14 @@ public class Domain {
         return this.registeredUsers;
     }
 
+    public void registerEncryptedDomainKey(String user, String enDomkey){
+        enDomkeyMap.put(user, enDomkey);
+    }
+
+    public String getDeviceEncryptedDomainKey(String user){
+        return enDomkeyMap.get(user);
+    }
+
     @Override
     public String toString() {
         final char NL = '\n';
@@ -58,17 +70,13 @@ public class Domain {
         final char SP = ':';
 
         StringBuilder sb = new StringBuilder();
-        sb.append(getName() + SP + ownerId);
+        sb.append(getName() + SP + ownerId + NL);
 
         for (String registeredUser : registeredUsers) {
-            sb.append(SP + registeredUser);
+            sb.append("" + TAB + registeredUser);
+            sb.append(SP + enDomkeyMap.get(registeredUser) + NL);
         }
-
-        sb.append(NL);
-
-        for (String devFullId : devices) {
-            sb.append(TAB + devFullId + NL);
-        }
+        
 
         return sb.toString();
     }

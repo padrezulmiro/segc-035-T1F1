@@ -4,7 +4,10 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
+import java.security.GeneralSecurityException;
+import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 import iohelper.Utils;
 import iotclient.MessageCode;
@@ -14,7 +17,7 @@ public class ServerManager {
 
     private DomainStorage domStorage;
     private DeviceStorage devStorage;
-    private UserStorage userStorage;
+    // private UserStorage userStorage;
 
     private static final String baseDir = "./output/server/";
     private static final String attestationFilePath = "attestation.txt";
@@ -25,9 +28,14 @@ public class ServerManager {
     private static final String temperatureDirectoryPath = baseDir + "temp/";
 
     private ServerManager(){
-        domStorage = new DomainStorage(domainFilePath);
         devStorage = new DeviceStorage(deviceFilePath);
-        userStorage = new UserStorage(userFilePath);
+            try {
+                domStorage = new DomainStorage(domainFilePath,devStorage);
+            } catch (GeneralSecurityException e) {
+                e.printStackTrace();
+                System.exit(-1);
+            }
+        // userStorage = new UserStorage(userFilePath);
 
         new File(imageDirectoryPath).mkdirs();
         new File(temperatureDirectoryPath).mkdirs();
@@ -70,7 +78,7 @@ public class ServerManager {
                 return new ServerResponse(MessageCode.NOK);
             }
 
-            domStorage.addDomain(domainName, ownerUID);
+            domStorage.addDomain(domainName, ownerUID, devStorage);
             return new ServerResponse(MessageCode.OK);
         } finally {
             domStorage.writeUnlock();
@@ -78,15 +86,15 @@ public class ServerManager {
     }
 
     public ServerResponse addUserToDomain(String requesterUID, String newUserID,
-            String domainName) {
+            String domainName, String enDomkey) {
         domStorage.writeLock();
-        userStorage.readLock();
+        // userStorage.readLock();
         try {
             if (!domStorage.domainExists(domainName)) {
                 return new ServerResponse(MessageCode.NODM);
             }
 
-            if (!userStorage.isUserRegistered(newUserID)) {
+            if (!ServerAuth.getInstance().isUserRegistered(newUserID)) {
                 return new ServerResponse(MessageCode.NOUSER);
             }
 
@@ -95,14 +103,14 @@ public class ServerManager {
             }
 
             boolean ret = domStorage
-                .addUserToDomain(requesterUID, newUserID, domainName);
+                .addUserToDomain(newUserID, domainName, enDomkey, devStorage);
             if (ret) {
                 return new ServerResponse(MessageCode.OK);
             } else {
                 return new ServerResponse(MessageCode.USEREXISTS);
             }
         } finally {
-            userStorage.readUnlock();
+            // userStorage.readUnlock();
             domStorage.writeUnlock();
         }
     }
@@ -126,8 +134,8 @@ public class ServerManager {
                 return new ServerResponse(MessageCode.DEVICEEXISTS);
             }
 
-            domStorage.addDeviceToDomain(userId, devId, domainName);
             devStorage.addDomainToDevice(userId, devId, domainName);
+            domStorage.addDeviceToDomain(userId, devId, domainName, devStorage);
             return new ServerResponse(MessageCode.OK);
         } finally {
             devStorage.writeUnlock();
@@ -135,26 +143,41 @@ public class ServerManager {
         }
     }
 
-
-    public ServerResponse registerTemperature(float temperature, String userId,
-            String devId) {
+    public ServerResponse registerTemperature(String temperature, String userId,
+            String devId, String domainName) {
         devStorage.writeLock();
+        domStorage.writeLock();
         try {
-            devStorage.saveDeviceTemperature(userId, devId, temperature);
-            return new ServerResponse(MessageCode.OK);
+            if(domStorage.isDeviceRegisteredInDomain(userId,devId,domainName)){
+                devStorage.saveDeviceTemperature(userId, devId, temperature, domainName);
+                domStorage.updateDomainsFile(devStorage);
+                return new ServerResponse(MessageCode.OK);
+            }else{
+                return new ServerResponse(MessageCode.NOK);
+            }
+
         } finally {
             devStorage.writeUnlock();
+            domStorage.writeUnlock();
         }
     }
 
     public ServerResponse registerImage(String filename, String userId,
-            String devId) {
+            String devId, String domainName) {
         devStorage.writeLock();
+        domStorage.writeLock();
         try {
-            devStorage.saveDeviceImage(userId, devId, filename);
-            return new ServerResponse(MessageCode.OK);
+            if(domStorage.isDeviceRegisteredInDomain(userId,devId,domainName)){
+                devStorage.saveDeviceImage(userId, devId, filename,domainName);
+                domStorage.updateDomainsFile(devStorage);
+                return new ServerResponse(MessageCode.OK);
+            }else{
+                return new ServerResponse(MessageCode.NOK);
+            }
+
         } finally {
             devStorage.writeUnlock();
+            domStorage.writeUnlock();
         }
     }
 
@@ -171,11 +194,10 @@ public class ServerManager {
                 return new ServerResponse(MessageCode.NOPERM);
             }
 
-            Map<String, Float> temps = domStorage.temperatures(domainName,
+            Map<String, String> temps = domStorage.temperatures(domainName,
                     devStorage);
-
-            //XXX ServerResponse is being init with a Map?
-            return new ServerResponse(MessageCode.OK, temps);
+            String enDomkey = domStorage.getDeviceEncryptedDomainKey(domainName, user);
+            return new ServerResponse(MessageCode.OK, temps, enDomkey);
         } finally {
             devStorage.readUnlock();
             domStorage.readUnlock();
@@ -183,25 +205,56 @@ public class ServerManager {
     }
 
     public ServerResponse getImage(String requesterUID, String targetUID,
-            String targetDID) {
+            String targetDID, String serverImgFolder) {
         domStorage.readLock();
         devStorage.readLock();
         try {
             if (!devStorage.deviceExists(targetUID, targetDID)) {
                 return new ServerResponse(MessageCode.NOID);
             }
-
-            String filepath = devStorage.getDeviceImage(targetUID, targetDID);
-            if (filepath == null) {
-                return new ServerResponse(MessageCode.NODATA);
-            }
-
-            if (domStorage.hasAccessToDevice(requesterUID, targetUID,
-                    targetDID)) {
-                return new ServerResponse(MessageCode.OK, filepath);
+            String domainName = domStorage.hasAccessToDeviceIn(requesterUID, targetUID, targetDID);
+            if (domainName!=null) {
+                String filepath = devStorage.getDeviceImage(targetUID, targetDID, domainName);
+                if (filepath == null) {
+                    return new ServerResponse(MessageCode.NODATA);
+                }    
+                String enDomkey = domStorage.getDeviceEncryptedDomainKey(domainName, requesterUID);
+                return new ServerResponse(MessageCode.OK, filepath, enDomkey);
             }
 
             return new ServerResponse(MessageCode.NOPERM);
+        } finally {
+            devStorage.readUnlock();
+            domStorage.readUnlock();
+        }
+    }
+
+    public ServerResponse getEncryptedDomainKeys(String userId, String devId ){
+        domStorage.readLock();
+        devStorage.readLock();
+        try {
+            Set<String> domains = domStorage.getUserDomains(userId);
+
+            HashMap<String,String> encryptedDomainKeys = new HashMap<>();
+            for (String dom : domains){
+                String enDomkey = domStorage.getDeviceEncryptedDomainKey(dom, userId);
+                encryptedDomainKeys.put(dom, enDomkey);
+            }
+
+            return new ServerResponse(MessageCode.OK,encryptedDomainKeys);
+        } finally {
+            devStorage.readUnlock();
+            domStorage.readUnlock();
+        }
+    }
+   
+    public ServerResponse getUserDomains(String user){
+        domStorage.readLock();
+        devStorage.readLock();
+        try {
+
+            Set<String> doms= domStorage.getUserDomains(user);
+            return new ServerResponse(MessageCode.OK, doms);
         } finally {
             devStorage.readUnlock();
             domStorage.readUnlock();
@@ -212,25 +265,25 @@ public class ServerManager {
      *AUTHENTICATION====================================================================================================================
      */
 
-    public ServerResponse authenticateUser(String user)
-            throws IOException {
-        userStorage.readLock();
-        try {
-            if (userStorage.isUserRegistered(user)) {
-                return new ServerResponse(MessageCode.OK_USER);
-            }
-        } finally {
-            userStorage.readUnlock();
-        }
+    // public ServerResponse authenticateUser(String user)
+    //         throws IOException {
+    //     // userStorage.readLock();
+    //     try {
+    //         if (!ServerAuth.getInstance().isUserRegistered(user)) {
+    //             return new ServerResponse(MessageCode.OK_USER);
+    //         }
+    //     } finally {
+    //         // userStorage.readUnlock();
+    //     }
 
-        userStorage.writeLock();
-        try {
-            userStorage.registerUser(user, "");
-            return new ServerResponse(MessageCode.OK_NEW_USER);
-        } finally {
-            userStorage.writeUnlock();
-        }
-    }
+    //     userStorage.writeLock();
+    //     try {
+    //         userStorage.registerUser(user, "");
+    //         return new ServerResponse(MessageCode.OK_NEW_USER);
+    //     } finally {
+    //         userStorage.writeUnlock();
+    //     }
+    // }
 
     public void disconnectDevice(String userID, String devID){
         devStorage.writeLock();
@@ -247,7 +300,7 @@ public class ServerManager {
         devStorage.writeLock();
         try {
             if (devStorage.deviceExists(userId, devId)) {
-                System.out.println("devid:" + Utils.fullID(userId, devId));
+                System.out.println("Authenticated device: " + Utils.fullID(userId, devId));
 
                 if (devStorage.isDeviceOnline(userId, devId)) {
                     System.out.println("dev is online");

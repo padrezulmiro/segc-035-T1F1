@@ -1,5 +1,6 @@
 package iotserver;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -9,6 +10,8 @@ import java.security.NoSuchAlgorithmException;
 import java.security.SignatureException;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
+import java.util.Base64;
+import java.util.Map;
 
 import iotclient.MessageCode;
 import iohelper.FileHelper;
@@ -66,13 +69,16 @@ public class ServerThread extends Thread {
                         registerTemperature();
                         break;
                     case EI:
-                        registerImage();
+                        registerImage(userID,deviceID);
                         break;
                     case RT:
                         getTemperatures();
                         break;
                     case RI:
                         getImage();
+                        break;
+                    case MYDOMAINS:
+                        getDomains(userID);
                         break;
                     case STOP:
                         stopThread();
@@ -97,6 +103,11 @@ public class ServerThread extends Thread {
             // TODO Auto-generated catch block
             e.printStackTrace();
         }
+    }
+
+    private void getDomains(String userID) throws IOException {
+        ServerResponse sr = manager.getUserDomains(userID);
+        out.writeObject(sr);
     }
 
     private void stopThread() {
@@ -124,11 +135,12 @@ public class ServerThread extends Thread {
         }
 
         int twoFACode = sa.generate2FACode();
+        System.out.println("DEBUG: " + twoFACode);
         int emailResponseCode = sa.send2FAEmail(userID, twoFACode);
         // Handle bad email response code
         while (emailResponseCode != 200) {
-            twoFACode = sa.generate2FACode();
-            emailResponseCode = sa.send2FAEmail(userID, twoFACode);
+           twoFACode = sa.generate2FACode();
+           emailResponseCode = sa.send2FAEmail(userID, twoFACode);
         }
 
         int receivedTwoFACode = in.readInt();
@@ -170,10 +182,90 @@ public class ServerThread extends Thread {
         out.writeObject(res);
     }
 
-    private void addUserToDomain() throws IOException, ClassNotFoundException {
-        String newUser = (String) in.readObject();
+
+    private void getImage() throws IOException, ClassNotFoundException {
+        String targetUser = (String) in.readObject();
+        String targetDev = (String) in.readObject();
+        ServerResponse sr = manager.getImage(this.userID, targetUser, targetDev,IMAGE_DIR_PATH);
+        MessageCode rCode = sr.responseCode();
+        // Send code to client
+        out.writeObject(rCode);
+        // Send file (if aplicable)
+        if( rCode == MessageCode.OK){
+            out.writeObject(sr.encryptedDomainKey());
+            File f = new File(sr.filePath());
+            FileHelper.sendFile(f, out);
+        }
+    }
+
+    private void getTemperatures() throws IOException, ClassNotFoundException {
+        
         String domain = (String) in.readObject();
-        MessageCode res = manager.addUserToDomain(userID, newUser, domain).responseCode();
+        ServerResponse sr = manager.getTemperatures(this.userID,domain);
+        MessageCode res = sr.responseCode(); //includes encryptedDomainKey
+        out.writeObject(res);
+        if(res==MessageCode.OK){
+            out.writeObject(sr); 
+        }
+    }
+
+    private int getEncryptedDomainKeys() throws IOException, ClassNotFoundException {
+        String userID = (String) in.readObject();
+        String devID = (String) in.readObject();
+        ServerResponse sr = manager.getEncryptedDomainKeys(userID,devID); //
+
+        // System.out.println("Endomkeys requested:");
+        // for (Map.Entry<String, String> entry : sr.allEncryptedDomainKeys().entrySet()) {
+        //     System.out.println(entry.getKey() + ": " + entry.getValue());
+        // }
+
+        out.writeObject(sr); 
+        return sr.allEncryptedDomainKeys().size();
+    }
+
+    private void registerImage(String devUID, String devDID)
+                throws IOException, ClassNotFoundException {
+        String filename = devUID + "_" + devDID + ".jpg"; 
+        int numOfDom = getEncryptedDomainKeys();
+        for (int i = 0; i < numOfDom; i++) {
+            // reading domain name
+            String domainName = (String)in.readObject();
+
+            String imgFolderPath = IMAGE_DIR_PATH + domainName + "/";
+            new File(imgFolderPath).mkdirs();
+            // reading the file
+            String fullImgPath = imgFolderPath + filename;
+            // long fileSize = (long)in.readObject();
+            File f = new File(fullImgPath);
+            FileHelper.receiveFile(f, in);
+            MessageCode res = manager
+                .registerImage(fullImgPath, this.userID, this.deviceID, domainName)
+                .responseCode();
+            out.writeObject(res);
+        }
+    }
+
+    private void registerTemperature() throws IOException, ClassNotFoundException {
+        int numOfDom = getEncryptedDomainKeys();
+
+        for (int i = 0; i < numOfDom; i++) {
+            String domainName = (String) in.readObject();
+            byte[] encryptedTempBytes = (byte[]) in.readObject();
+            String encryptedTempStr =  Base64.getEncoder().encodeToString(encryptedTempBytes);
+            MessageCode res = manager
+                .registerTemperature(encryptedTempStr, this.userID, this.deviceID, domainName)
+                .responseCode();
+            out.writeObject(res);
+            out.flush();
+        }
+    }
+
+
+    private void addUserToDomain() throws IOException, ClassNotFoundException {
+        String newUser = (String)in.readObject();
+        String domain = (String)in.readObject();
+        String enDomkey = (String)in.readObject();
+        MessageCode res = manager.addUserToDomain(userID, newUser, domain, enDomkey).responseCode();
         out.writeObject(res);
     }
 
@@ -181,61 +273,6 @@ public class ServerThread extends Thread {
         String domain = (String) in.readObject();
         MessageCode res = manager.registerDeviceInDomain(domain, this.userID, this.deviceID).responseCode();
         out.writeObject(res);
-    }
-
-    private void registerTemperature() throws IOException, ClassNotFoundException {
-        String tempStr = (String) in.readObject();
-        float temperature;
-        try {
-            temperature = Float.parseFloat(tempStr);
-        } catch (NumberFormatException e) {
-            out.writeObject(new ServerResponse(MessageCode.NOK));
-            out.flush();
-            return;
-        }
-
-        MessageCode res = manager
-                .registerTemperature(temperature, this.userID, this.deviceID)
-                .responseCode();
-        out.writeObject(res);
-        out.flush();
-    }
-
-    private void registerImage() throws IOException, ClassNotFoundException {
-        String filename = (String) in.readObject();
-        long fileSize = (long) in.readObject();
-        String fullImgPath = IMAGE_DIR_PATH + filename;
-
-        FileHelper.receiveFile(fileSize, fullImgPath, in);
-
-        MessageCode res = manager
-                .registerImage(filename, this.userID, this.deviceID)
-                .responseCode();
-        out.writeObject(res);
-    }
-
-    private void getTemperatures() throws IOException, ClassNotFoundException {
-        String domain = (String) in.readObject();
-        ServerResponse sResponse = manager.getTemperatures(this.userID, domain);
-        MessageCode res = sResponse.responseCode();
-        out.writeObject(res);
-        if (res == MessageCode.OK) {
-            // FileHelper.sendFile(sResponse.filePath(),out);
-            out.writeObject(sResponse.temperatures());
-        }
-    }
-
-    private void getImage() throws IOException, ClassNotFoundException {
-        String targetUser = (String) in.readObject();
-        String targetDev = (String) in.readObject();
-        ServerResponse sr = manager.getImage(this.userID, targetUser, targetDev);
-        MessageCode rCode = sr.responseCode();
-        // Send code to client
-        out.writeObject(rCode);
-        // Send file (if aplicable)
-        if (rCode == MessageCode.OK) {
-            FileHelper.sendFile(sr.filePath(), out);
-        }
     }
 
     private void authUnregisteredUser(long nonce) throws IOException,
