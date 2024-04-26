@@ -18,6 +18,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.UnrecoverableKeyException;
 import java.security.cert.CertificateException;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -26,6 +27,7 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import javax.crypto.Mac;
 
+import iohelper.CipherHelper;
 import iohelper.Utils;
 
 public class DomainStorage {
@@ -38,7 +40,7 @@ public class DomainStorage {
     private Lock wLock;
     private Lock rLock;
 
-    public DomainStorage(String domainFilePath, DeviceStorage devStorage) {
+    public DomainStorage(String domainFilePath, DeviceStorage devStorage) throws GeneralSecurityException {
         domainsFile = new File(domainFilePath);
         domains = new HashMap<>();
 
@@ -51,8 +53,6 @@ public class DomainStorage {
         try {
             populateDomainsFromFile(devStorage);
         } catch (IOException e) {
-            e.printStackTrace();
-        } catch (GeneralSecurityException e) {
             e.printStackTrace();
         }
 
@@ -209,6 +209,8 @@ public class DomainStorage {
             throws IOException, GeneralSecurityException {
         final char SP = ':';
         final char TAB = '\t';
+        final char NL = '\n';
+
 
         BufferedReader reader = new BufferedReader(new FileReader(domainsFile));
         String[] lines = (String[]) reader.lines().toArray(String[]::new);
@@ -216,17 +218,17 @@ public class DomainStorage {
 
         StringBuilder sb = new StringBuilder();
         for (String s : lines) {
-            sb.append(s);
+            sb.append(s+NL);
         }
 
         boolean validHmac = false;
         try {
-            validHmac = verifyHmac(sb.toString());
-        } catch (UnrecoverableKeyException |
-                 InvalidKeyException |
-                 KeyStoreException |
-                 NoSuchAlgorithmException |
-                 CertificateException e) {
+            if (domainsFile.exists() && domainsFile.length()!=0){
+                validHmac = verifyHmac(sb.toString());
+            }else{
+                validHmac = true;
+            }
+        } catch (Exception e) {
             e.printStackTrace();
         }
 
@@ -234,7 +236,7 @@ public class DomainStorage {
             throw new GeneralSecurityException("Computed SHA-Hmac" +
                     "differs from expected! Corrupted domains' file.");
         }
-
+        
         String currentDomainName = null;
         for (int i = 0; i < lines.length; i++) {
             String line = lines[i];
@@ -272,23 +274,26 @@ public class DomainStorage {
     private byte[] computeFileHash(String body) throws KeyStoreException,
             NoSuchAlgorithmException, CertificateException, IOException,
             UnrecoverableKeyException, InvalidKeyException {
-        String keyStorePath = IoTServer.SERVER_CONFIG.keyStorePath();
-        String keyStorePwd = IoTServer.SERVER_CONFIG.keyStorePwd();
-
-        KeyStore ks = KeyStore
-            .getInstance(new File(keyStorePath), keyStorePwd.toCharArray());
+        String keyStorePath = ServerConfig.getInstance().keyStorePath();
+        String keyStorePwd = ServerConfig.getInstance().keyStorePwd();
+        KeyStore ks = CipherHelper.getKeyStore(keyStorePath, keyStorePwd);
         Key key = ks.getKey(HASH_KEY_ALIAS, keyStorePwd.toCharArray());
         Mac mac = Mac.getInstance(MAC_ALGORITHM);
         mac.init(key);
         mac.update(body.getBytes());
-        return mac.doFinal();
+        byte[] ret = mac.doFinal();
+        return ret;
     }
 
     private boolean verifyHmac(String target) throws IOException,
             UnrecoverableKeyException, InvalidKeyException, KeyStoreException,
             NoSuchAlgorithmException, CertificateException {
+
         byte[] hmac = Files.readAllBytes(Paths.get(HMAC_FILE_PATH));
-        return Arrays.equals(hmac, computeFileHash(target));
+        System.out.println(" written HMAC: " + Base64.getEncoder().encodeToString(hmac));
+        byte[] readHmac = computeFileHash(target);
+        System.out.println("computed HMAC: " + Base64.getEncoder().encodeToString(readHmac));
+        return Arrays.equals(hmac, readHmac);
     }
 
     private void writeHmacToFile(byte[] hmac) throws IOException {

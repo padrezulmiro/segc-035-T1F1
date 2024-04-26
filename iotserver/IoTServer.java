@@ -7,9 +7,8 @@ import javax.net.ssl.SSLServerSocket;
 import javax.net.ssl.SSLServerSocketFactory;
 
 public class IoTServer {
-    public static final ServerConfig SERVER_CONFIG = ServerConfig.getInstance();
-    public static final ServerManager SERVER_MANAGER = ServerManager
-        .getInstance();
+    public static ServerConfig SERVER_CONFIG;
+    public static  ServerManager SERVER_MANAGER;
 
     private static final int ARG_NUM = 5;
     private static final int DEFAULT_PORT = 12345;
@@ -39,6 +38,7 @@ public class IoTServer {
             System.exit(-1);
         }
 
+        SERVER_CONFIG = ServerConfig.getInstance();
         SERVER_CONFIG.setKeyStorePath(keystorePathArg);
         SERVER_CONFIG.setKeyStorePwd(keystorePwdArg);
 
@@ -46,6 +46,7 @@ public class IoTServer {
         System.setProperty("javax.net.ssl.keyStorePassword", keystorePwdArg);
         System.setProperty("javax.net.ssl.keyStoreType", "JCEKS");
 
+        SERVER_MANAGER = ServerManager.getInstance();
         //TODO Add users' file password cypher to server manager
 
         IoTServer server = new IoTServer(portArg,

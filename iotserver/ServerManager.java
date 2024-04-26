@@ -4,6 +4,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
+import java.security.GeneralSecurityException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -30,7 +31,12 @@ public class ServerManager {
 
     private ServerManager(){
         devStorage = new DeviceStorage(deviceFilePath);
-        domStorage = new DomainStorage(domainFilePath,devStorage);
+            try {
+                domStorage = new DomainStorage(domainFilePath,devStorage);
+            } catch (GeneralSecurityException e) {
+                e.printStackTrace();
+                System.exit(-1);
+            }
         userStorage = new UserStorage(userFilePath);
 
         new File(imageDirectoryPath).mkdirs();
