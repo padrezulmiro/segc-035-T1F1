@@ -18,7 +18,6 @@ public class ServerManager {
     private DomainStorage domStorage;
     private DeviceStorage devStorage;
     private UserStorage userStorage;
-    private Long clientFileSize;
 
     private static final String baseDir = "./output/server/";
     private static final String attestationFilePath = "attestation.txt";
@@ -27,7 +26,6 @@ public class ServerManager {
     private static final String userFilePath = baseDir + "user.txt";
     private static final String imageDirectoryPath = baseDir + "img/";
     private static final String temperatureDirectoryPath = baseDir + "temp/";
-    private static final String clientFileName = "IoTDevice.jar";
 
     private ServerManager(){
         devStorage = new DeviceStorage(deviceFilePath);
@@ -43,16 +41,16 @@ public class ServerManager {
         new File(temperatureDirectoryPath).mkdirs();
 
         // register attestation value
-        try {
+       /* try {
             File attestationFile = new File(attestationFilePath);
             BufferedReader attestationReader =
                 new BufferedReader(new FileReader(attestationFile));
-            clientFileSize = Long.parseLong(attestationReader.readLine());
+                clientFilePath = attestationReader.readLine();
             attestationReader.close();
         } catch (IOException e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
-        }
+        }*/
     }
 
     public static ServerManager getInstance(){
@@ -280,7 +278,7 @@ public class ServerManager {
 
         userStorage.writeLock();
         try {
-            userStorage.registerUser(user);
+            userStorage.registerUser(user, "");
             return new ServerResponse(MessageCode.OK_NEW_USER);
         } finally {
             userStorage.writeUnlock();
@@ -320,12 +318,12 @@ public class ServerManager {
         }
     }
 
-    public ServerResponse attestClient(String devFileName, long devFileSize)
+   /** public ServerResponse attestClient(String devFileName, long devFileSize)
             throws IOException {
         if (devFileName.equals(clientFileName) && devFileSize==clientFileSize) {
             return new ServerResponse(MessageCode.OK_TESTED);
         }
 
         return new ServerResponse(MessageCode.NOK_TESTED);
-    }
+    }*/
 }

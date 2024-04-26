@@ -30,6 +30,8 @@ import javax.crypto.Mac;
 import iohelper.CipherHelper;
 import iohelper.Utils;
 
+import iohelper.Utils;
+
 public class DomainStorage {
     private final String HASH_KEY_ALIAS = "files-hash-key";
     private final String MAC_ALGORITHM = "HmacSHA256";

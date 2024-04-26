@@ -1,7 +1,10 @@
 package iohelper;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileReader;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 
 public class Utils {
@@ -43,5 +46,19 @@ public class Utils {
             System.out.println("File created: " + fileCreated.getName());
         }
         return fileCreated;
+    }
+
+    public static String certPathFromUser(String user) {
+        return "output/server/scerts/" + user + ".cert";
+    }
+
+    public static byte[] longToByteArray(long l) {
+        return ByteBuffer.allocate(Long.BYTES).putLong(l).array();
+    }
+
+    public static String getAttestationPath() throws IOException{
+        BufferedReader br = new BufferedReader(new FileReader("attestation.txt"));
+        String path = br.readLine();
+        return path;
     }
 }

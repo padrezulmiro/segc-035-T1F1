@@ -5,11 +5,17 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
+import java.security.SignatureException;
+import java.security.cert.Certificate;
+import java.security.cert.CertificateException;
 import java.util.Base64;
 import java.util.Map;
 
 import iotclient.MessageCode;
 import iohelper.FileHelper;
+import iohelper.Utils;
 
 public class ServerThread extends Thread {
     private static final String IMAGE_DIR_PATH = "./output/server/img/";
@@ -38,7 +44,7 @@ public class ServerThread extends Thread {
             in = new ObjectInputStream(socket.getInputStream());
             manager = ServerManager.getInstance();
 
-            while(isRunning){
+            while (isRunning) {
                 MessageCode opcode = (MessageCode) in.readObject();
                 switch (opcode) {
                     case AU:
@@ -84,6 +90,18 @@ public class ServerThread extends Thread {
         } catch (ClassNotFoundException e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
+        } catch (InvalidKeyException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        } catch (CertificateException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        } catch (NoSuchAlgorithmException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        } catch (SignatureException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
         }
     }
 
@@ -98,12 +116,77 @@ public class ServerThread extends Thread {
         isRunning = false;
     }
 
-    
+    private void authUser() throws ClassNotFoundException, IOException,
+            InvalidKeyException, CertificateException, NoSuchAlgorithmException,
+            SignatureException {
+        System.out.println("Starting user auth.");
+        ServerAuth sa = IoTServer.SERVER_AUTH;
+        userID = (String) in.readObject();
+
+        long nonce = sa.generateNonce();
+        out.writeLong(nonce);
+
+        if (sa.isUserRegistered(userID)) {
+            out.writeObject(MessageCode.OK_USER);
+            authRegisteredUser(nonce);
+        } else {
+            out.writeObject(MessageCode.OK_NEW_USER);
+            authUnregisteredUser(nonce);
+        }
+
+        int twoFACode = sa.generate2FACode();
+        int emailResponseCode = sa.send2FAEmail(userID, twoFACode);
+        // Handle bad email response code
+        while (emailResponseCode != 200) {
+            twoFACode = sa.generate2FACode();
+            emailResponseCode = sa.send2FAEmail(userID, twoFACode);
+        }
+
+        int receivedTwoFACode = in.readInt();
+
+        if (twoFACode == receivedTwoFACode) {
+            out.writeObject(MessageCode.OK);
+        } else {
+            out.writeObject(MessageCode.NOK);
+        }
+    }
+
+    private void authDevice() throws IOException, ClassNotFoundException {
+        String deviceID = (String) in.readObject();
+        MessageCode res = manager.authenticateDevice(userID, deviceID).responseCode();
+        if (res == MessageCode.OK_DEVID) {
+            this.deviceID = deviceID;
+        }
+        out.writeObject(res);
+    }
+
+    private void attestClient() throws ClassNotFoundException, IOException,
+            NoSuchAlgorithmException {
+        long nonce = ServerAuth.generateNonce();
+        out.writeLong(nonce);
+        out.flush();
+
+        byte[] receivedHash = (byte[]) in.readObject();
+        if (ServerAuth.verifyAttestationHash(receivedHash, nonce)) {
+            out.writeObject(MessageCode.OK_TESTED);
+        } else {
+            manager.disconnectDevice(userID, deviceID);
+            out.writeObject(MessageCode.NOK_TESTED);
+        }
+    }
+
+    private void createDomain() throws IOException, ClassNotFoundException {
+        String domain = (String) in.readObject();
+        MessageCode res = manager.createDomain(userID, domain).responseCode();
+        out.writeObject(res);
+    }
+
+
     private void getImage() throws IOException, ClassNotFoundException {
-        String targetUser = (String)in.readObject();
-        String targetDev = (String)in.readObject();
-        ServerResponse sr = manager.getImage(this.userID,targetUser,targetDev,IMAGE_DIR_PATH);
-        MessageCode rCode=sr.responseCode();
+        String targetUser = (String) in.readObject();
+        String targetDev = (String) in.readObject();
+        ServerResponse sr = manager.getImage(this.userID, targetUser, targetDev,IMAGE_DIR_PATH);
+        MessageCode rCode = sr.responseCode();
         // Send code to client
         out.writeObject(rCode);
         // Send file (if aplicable)
@@ -176,11 +259,6 @@ public class ServerThread extends Thread {
         }
     }
 
-    private void registerDeviceInDomain() throws IOException, ClassNotFoundException {
-        String domain = (String)in.readObject();
-        MessageCode res = manager.registerDeviceInDomain(domain, this.userID, this.deviceID).responseCode();
-        out.writeObject(res);
-    }
 
     private void addUserToDomain() throws IOException, ClassNotFoundException {
         String newUser = (String)in.readObject();
@@ -190,34 +268,41 @@ public class ServerThread extends Thread {
         out.writeObject(res);
     }
 
-    private void createDomain() throws IOException, ClassNotFoundException {
-        String domain = (String)in.readObject();
-        MessageCode res = manager.createDomain(userID,domain).responseCode();
+    private void registerDeviceInDomain() throws IOException, ClassNotFoundException {
+        String domain = (String) in.readObject();
+        MessageCode res = manager.registerDeviceInDomain(domain, this.userID, this.deviceID).responseCode();
         out.writeObject(res);
     }
 
-    private void attestClient() throws IOException, ClassNotFoundException {
-        String fileName = (String)in.readObject();
-        long fileSize = (long)in.readLong();
-        MessageCode res = manager
-            .attestClient(fileName, fileSize)
-            .responseCode();
-        out.writeObject(res);
-        // System.out.println("Correct " + res + "filename=" + fileName + " size=" + fileSize);
-    }
+    private void authUnregisteredUser(long nonce) throws IOException,
+            ClassNotFoundException, InvalidKeyException, CertificateException,
+            NoSuchAlgorithmException, SignatureException {
+        ServerAuth sa = IoTServer.SERVER_AUTH;
 
-    private void authDevice() throws IOException, ClassNotFoundException {
-        String deviceID = (String)in.readObject();
-        MessageCode res = manager.authenticateDevice(userID,deviceID).responseCode();
-        if(res == MessageCode.OK_DEVID){this.deviceID = deviceID;}
-        out.writeObject(res);
-    }
+        long receivedUnsignedNonce = in.readLong();
+        byte[] signedNonce = (byte[]) in.readObject();
+        Certificate cert = (Certificate) in.readObject();
 
-    private void authUser() throws IOException, ClassNotFoundException {
-        if (this.userID==null){
-            this.userID = (String) in.readObject();
+        if (sa.verifySignedNonce(signedNonce, cert, nonce) &&
+                receivedUnsignedNonce == nonce) {
+            sa.registerUser(userID, Utils.certPathFromUser(userID));
+            sa.saveCertificateInFile(userID, cert);
+            out.writeObject(MessageCode.OK);
+        } else {
+            out.writeObject(MessageCode.WRONG_NONCE);
         }
-        String pwd = (String) in.readObject();
-        out.writeObject(manager.authenticateUser(userID).responseCode());
+    }
+
+    private void authRegisteredUser(long nonce) throws ClassNotFoundException,
+            IOException, InvalidKeyException, CertificateException,
+            NoSuchAlgorithmException, SignatureException {
+        ServerAuth sa = IoTServer.SERVER_AUTH;
+
+        byte[] signedNonce = (byte[]) in.readObject();
+        if (sa.verifySignedNonce(signedNonce, userID, nonce)) {
+            out.writeObject(MessageCode.OK);
+        } else {
+            out.writeObject(MessageCode.WRONG_NONCE);
+        }
     }
 }

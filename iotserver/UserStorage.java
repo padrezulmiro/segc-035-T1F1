@@ -6,21 +6,21 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import iohelper.Utils;
 
 public class UserStorage {
-    private Set<String> users;
+    private Map<String, String> users;
     private File usersFile;
     private Lock wLock;
     private Lock rLock;
 
     public UserStorage(String usersFilePath) {
-        users = new HashSet<>();
+        users = new HashMap<>();
         usersFile = new File(usersFilePath);
         ReentrantReadWriteLock rwLock = new ReentrantReadWriteLock(true);
         wLock = rwLock.writeLock();
@@ -40,29 +40,18 @@ public class UserStorage {
         }
     }
 
-    public boolean registerUser(String user) {
-        boolean ret = users.add(user);
+    public boolean registerUser(String user, String certPath) {
+        boolean ret = users.put(user, certPath) != null;
         updateUsersFile();
         return ret;
     }
 
     public boolean isUserRegistered(String user) {
-        return users.contains(user);
+        return users.containsKey(user);
     }
 
-    private void updateUsersFile() {
-        final String NL = "\n";
-        StringBuilder sb = new StringBuilder();
-        for (String s: users) {
-            sb.append(s + NL);
-        }
-
-        try (PrintWriter pw = new PrintWriter(usersFile)) {
-            pw.write(sb.toString());
-            pw.close();
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        }
+    public String userCertPath(String user) {
+        return users.get(user);
     }
 
     public void readLock() {
@@ -81,6 +70,23 @@ public class UserStorage {
         wLock.unlock();
     }
 
+    private void updateUsersFile() {
+        final String NL = "\n";
+        final String SEP = ":";
+
+        StringBuilder sb = new StringBuilder();
+        for (String user: users.keySet()) {
+            sb.append(user + SEP + users.get(user) + NL);
+        }
+
+        try (PrintWriter pw = new PrintWriter(usersFile)) {
+            pw.write(sb.toString());
+            pw.close();
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }
+    }
+
     private void populateUsersFromFile() throws IOException {
         BufferedReader reader = new BufferedReader(new FileReader(usersFile));
         String[] lines = (String[]) reader.lines().toArray(String[]::new);
@@ -89,7 +95,8 @@ public class UserStorage {
         for (String line: lines) {
             String[] tokens  = Utils.split(line, ':');
             String user = tokens[0];
-            registerUser(user);
+            String certPath = tokens[1];
+            registerUser(user, certPath);
         }
     }
 }

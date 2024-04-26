@@ -25,8 +25,6 @@ all:
 	jar cvfe IoTDevice.jar iotclient.IoTDevice -C ./bin $(DEVICE_DIR) \
 -C ./bin $(HELPER_DIR)
 	jar cvfe IoTServer.jar iotserver.IoTServer -C ./bin $(SERVER_DIR) \
--C ./bin $(HELPER_DIR)
-	chmod +x ./attestation.sh
-	./attestation.sh
+-C ./bin iotclient/MessageCode.class -C ./bin $(HELPER_DIR)
 clean:
 	rm -r bin; mkdir bin
