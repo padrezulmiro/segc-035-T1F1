@@ -26,16 +26,7 @@ import java.security.UnrecoverableKeyException;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
 import java.security.InvalidAlgorithmParameterException;
-// import java.security.InvalidKeyException;
-// import java.security.KeyStore;
-// import java.security.KeyStoreException;
-// import java.security.NoSuchAlgorithmException;
-// import java.security.Key;
-// import java.security.PrivateKey;
 import java.security.PublicKey;
-// import java.security.UnrecoverableKeyException;
-// import java.security.cert.Certificate;
-// import java.security.cert.CertificateException;
 import java.security.spec.InvalidKeySpecException;
 import java.util.Base64;
 import java.util.HashMap;
@@ -81,7 +72,7 @@ public class IoTDevice {
 
     private static Scanner sc;
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException, InterruptedException {
         addCliShutdownHook();
         sc = new Scanner(System.in);
         // Check arguments
@@ -134,6 +125,7 @@ public class IoTDevice {
             // Program doesn't end until CTRL+C is pressed
             while (true) {// Steps 8 - 10
                 System.out.print("> ");
+                while (System.in.available() <= 0) Thread.sleep(500);
                 String command = sc.nextLine();
                 try {
                     executeCommand(command);
@@ -181,7 +173,7 @@ public class IoTDevice {
         }
     }
 
-    private static void twoFactorAuth(String user) {
+    private static void twoFactorAuth(String user) throws InterruptedException {
 
         try {
             boolean auth = false;
@@ -243,6 +235,9 @@ public class IoTDevice {
                     System.out.println("Check your email for an authentication code.");
                     ;
                     System.out.print("> Code: ");
+
+                    while (System.in.available() <= 0) Thread.sleep(500);
+
                     String c2fa = sc.nextLine();
                     out.writeInt(Integer.valueOf(c2fa));
                     out.flush();
