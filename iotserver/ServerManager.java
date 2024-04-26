@@ -1,8 +1,6 @@
 package iotserver;
 
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileReader;
 import java.io.IOException;
 import java.security.GeneralSecurityException;
 import java.util.HashMap;
@@ -94,7 +92,7 @@ public class ServerManager {
                 return new ServerResponse(MessageCode.NODM);
             }
 
-            if (!ServerAuth.getInstance().isUserRegistered(newUserID)) {
+            if (!ServerAuth.getInstance("").isUserRegistered(newUserID)) {
                 return new ServerResponse(MessageCode.NOUSER);
             }
 
@@ -254,6 +252,19 @@ public class ServerManager {
         try {
 
             Set<String> doms= domStorage.getUserDomains(user);
+            return new ServerResponse(MessageCode.OK, doms);
+        } finally {
+            devStorage.readUnlock();
+            domStorage.readUnlock();
+        }
+    }
+
+    public ServerResponse getDeviceDomains(String userId, String devId){
+        domStorage.readLock();
+        devStorage.readLock();
+        try {
+
+            Set<String> doms= domStorage.getDeviceDomains(userId,devId);
             return new ServerResponse(MessageCode.OK, doms);
         } finally {
             devStorage.readUnlock();

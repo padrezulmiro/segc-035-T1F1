@@ -6,7 +6,6 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.ObjectInputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.ByteBuffer;
@@ -40,20 +39,20 @@ public class ServerAuth {
 
     private UserStorage userStorage;
 
-    public static ServerAuth getInstance() {
-        ServerAuth instance = INSTANCE;
-        if (instance != null)
-            return instance;
+    public static ServerAuth getInstance(String cipherPwd) {
+        ServerAuth result = INSTANCE;
+        if (result != null)
+            return result;
 
         synchronized (ServerAuth.class) {
-            if (instance == null)
-                instance = new ServerAuth();
-            return instance;
+            if (INSTANCE == null)
+                INSTANCE = new ServerAuth(cipherPwd);
+            return INSTANCE;
         }
     }
 
-    private ServerAuth() {
-        userStorage = new UserStorage(USER_FILEPATH);
+    private ServerAuth(String cipherPwd) {
+        userStorage = new UserStorage(USER_FILEPATH, cipherPwd);
     }
 
     public boolean isUserRegistered(String user) {

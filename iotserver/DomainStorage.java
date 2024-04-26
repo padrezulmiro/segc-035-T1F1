@@ -146,6 +146,16 @@ public class DomainStorage {
         return userDomains;
     }
 
+    public Set<String> getDeviceDomains(String userID, String devID){
+        Set<String> devDomains = new HashSet<String>();
+        for (String dom : domains.keySet()){
+            if (isDeviceRegisteredInDomain(userID, devID, dom)){
+                devDomains.add(dom);
+            }
+        }
+        return devDomains;
+    }
+
     public void readLock() {
         rLock.lock();
     }

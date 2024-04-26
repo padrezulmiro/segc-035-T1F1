@@ -78,7 +78,7 @@ public class ServerThread extends Thread {
                         getImage();
                         break;
                     case MYDOMAINS:
-                        getDomains(userID);
+                        getDomains(userID,deviceID);
                         break;
                     case STOP:
                         stopThread();
@@ -88,25 +88,22 @@ public class ServerThread extends Thread {
         } catch (IOException e) {
             e.printStackTrace();
         } catch (ClassNotFoundException e) {
-            // TODO Auto-generated catch block
             e.printStackTrace();
         } catch (InvalidKeyException e) {
-            // TODO Auto-generated catch block
             e.printStackTrace();
         } catch (CertificateException e) {
-            // TODO Auto-generated catch block
             e.printStackTrace();
         } catch (NoSuchAlgorithmException e) {
-            // TODO Auto-generated catch block
             e.printStackTrace();
         } catch (SignatureException e) {
-            // TODO Auto-generated catch block
+            e.printStackTrace();
+        } catch (InterruptedException e) {
             e.printStackTrace();
         }
     }
 
-    private void getDomains(String userID) throws IOException {
-        ServerResponse sr = manager.getUserDomains(userID);
+    private void getDomains(String userID,String deviceID) throws IOException {
+        ServerResponse sr = manager.getDeviceDomains(userID,deviceID);
         out.writeObject(sr);
     }
 
@@ -118,7 +115,7 @@ public class ServerThread extends Thread {
 
     private void authUser() throws ClassNotFoundException, IOException,
             InvalidKeyException, CertificateException, NoSuchAlgorithmException,
-            SignatureException {
+            SignatureException, InterruptedException {
         System.out.println("Starting user auth.");
         ServerAuth sa = IoTServer.SERVER_AUTH;
         userID = (String) in.readObject();
@@ -135,12 +132,13 @@ public class ServerThread extends Thread {
         }
 
         int twoFACode = sa.generate2FACode();
-        System.out.println("DEBUG: " + twoFACode);
+        System.out.println("JUST FOR FASTER TESTING - 2FA code is " + twoFACode);
         int emailResponseCode = sa.send2FAEmail(userID, twoFACode);
         // Handle bad email response code
         while (emailResponseCode != 200) {
-           twoFACode = sa.generate2FACode();
-           emailResponseCode = sa.send2FAEmail(userID, twoFACode);
+            Thread.sleep(6 * 1000);
+            twoFACode = sa.generate2FACode();
+            emailResponseCode = sa.send2FAEmail(userID, twoFACode);
         }
 
         int receivedTwoFACode = in.readInt();
@@ -154,7 +152,9 @@ public class ServerThread extends Thread {
 
     private void authDevice() throws IOException, ClassNotFoundException {
         String deviceID = (String) in.readObject();
-        MessageCode res = manager.authenticateDevice(userID, deviceID).responseCode();
+        MessageCode res = manager.authenticateDevice(userID, deviceID)
+            .responseCode();
+
         if (res == MessageCode.OK_DEVID) {
             this.deviceID = deviceID;
         }

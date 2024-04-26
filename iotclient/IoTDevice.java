@@ -2,7 +2,6 @@ package iotclient;
 
 import iohelper.CipherHelper;
 import iohelper.FileHelper;
-import iohelper.Utils;
 import iotserver.ServerResponse;
 import java.io.BufferedWriter;
 import java.io.File;
@@ -50,6 +49,7 @@ import javax.net.ssl.SSLSocketFactory;
 public class IoTDevice {
     private static final int DEFAULT_PORT = 12345;
     private static final int ARG_NUM = 6;
+    private static final String CLIENT_EXEC_PATH = "IoTDevice.jar";
 
     static String userid;
     static String devid;
@@ -71,7 +71,7 @@ public class IoTDevice {
 
     private static Scanner sc;
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException, InterruptedException {
         addCliShutdownHook();
         sc = new Scanner(System.in);
         // Check arguments
@@ -124,6 +124,7 @@ public class IoTDevice {
             // Program doesn't end until CTRL+C is pressed
             while (true) {// Steps 8 - 10
                 System.out.print("> ");
+                while (System.in.available() <= 0) Thread.sleep(500);
                 String command = sc.nextLine();
                 try {
                     executeCommand(command);
@@ -141,10 +142,9 @@ public class IoTDevice {
     private static void sendAttestationHash(long nonce) {
         try {
             final int CHUNK_SIZE = 1024;
-            String clientExecPath = Utils.getAttestationPath();
-            long clientExecSize = new File(clientExecPath).length();
+            long clientExecSize = new File(CLIENT_EXEC_PATH).length();
             FileInputStream clientFIS;
-            clientFIS = new FileInputStream(clientExecPath);
+            clientFIS = new FileInputStream(CLIENT_EXEC_PATH);
             MessageDigest md = MessageDigest.getInstance("SHA");
 
             long leftToRead = clientExecSize;
@@ -171,7 +171,7 @@ public class IoTDevice {
         }
     }
 
-    private static void twoFactorAuth(String user) {
+    private static void twoFactorAuth(String user) throws InterruptedException {
 
         try {
             boolean auth = false;
@@ -204,7 +204,7 @@ public class IoTDevice {
                         out.writeObject(cert);
 
                         // Receive confirmation
-                        // TODO handle receiving WRONG_NONCE
+                        // handle WRONG_NONCE
                         if (!in.readObject().equals(MessageCode.OK)) {
                             System.exit(-1);
                         }
@@ -233,6 +233,9 @@ public class IoTDevice {
                     System.out.println("Check your email for an authentication code.");
                     ;
                     System.out.print("> Code: ");
+
+                    while (System.in.available() <= 0) Thread.sleep(500);
+
                     String c2fa = sc.nextLine();
                     out.writeInt(Integer.valueOf(c2fa));
                     out.flush();
@@ -916,49 +919,4 @@ public class IoTDevice {
         return false;
     }
 
-    /**
-     * Sends device ID for authentication.
-     * 
-     * @param deviceID
-     */
-    /*
-     * private static void deviceAuth(String deviceID) {
-     * try {
-     * System.out.println("Starting device ID authentication.");
-     * out.writeObject(MessageCode.AD);
-     * out.writeObject(deviceID);
-     * boolean validID = false;
-     * 
-     * // out.writeObject(deviceID); //probably only once
-     * 
-     * do {
-     * MessageCode code = (MessageCode) in.readObject();
-     * switch (code) {
-     * case NOK_DEVID:
-     * System.out.println(MessageCode.NOK_DEVID.getDesc());
-     * 
-     * // Scanner sc = new Scanner(System.in);
-     * System.out.println("New device ID:");
-     * String newID = sc.nextLine();
-     * // sc.close();
-     * out.writeObject(MessageCode.AD);
-     * out.writeObject(newID);
-     * break;
-     * case OK_DEVID:
-     * System.out.println(MessageCode.OK_DEVID.getDesc());
-     * validID = true;
-     * default:
-     * break;
-     * }
-     * } while (!validID);
-     * 
-     * } catch (IOException e) {
-     * System.err.println("ERROR" + e.getMessage());
-     * System.exit(-1);
-     * } catch (ClassNotFoundException e) {
-     * e.printStackTrace();
-     * System.exit(-1);
-     * }
-     * }
-     */
 }
