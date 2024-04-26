@@ -137,10 +137,10 @@ public class ServerThread extends Thread {
         int twoFACode = sa.generate2FACode();
         int emailResponseCode = sa.send2FAEmail(userID, twoFACode);
         // Handle bad email response code
-        while (emailResponseCode != 200) {
-            twoFACode = sa.generate2FACode();
-            emailResponseCode = sa.send2FAEmail(userID, twoFACode);
-        }
+        //while (emailResponseCode != 200) {
+        //    twoFACode = sa.generate2FACode();
+        //    emailResponseCode = sa.send2FAEmail(userID, twoFACode);
+        //}
 
         int receivedTwoFACode = in.readInt();
 
