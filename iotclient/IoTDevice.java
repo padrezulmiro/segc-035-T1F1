@@ -918,5 +918,5 @@ public class IoTDevice {
         }
         return false;
     }
-
+    
 }
