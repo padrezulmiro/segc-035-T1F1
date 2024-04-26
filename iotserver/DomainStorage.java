@@ -266,7 +266,6 @@ public class DomainStorage {
                 devStorage.addDomainToDevice(devUID, devDID, currentDomainName);
                 devStorage.saveDeviceImage(devUID, devDID, imgPath, currentDomainName);
                 devStorage.saveDeviceTemperature(devUID, devDID, enTempStr, currentDomainName);
-                System.out.println("now for something entirely different:" + devStorage.getDeviceString(Utils.fullID(devUID, devDID),currentDomainName));
             }
         }
     }

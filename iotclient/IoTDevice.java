@@ -278,7 +278,7 @@ public class IoTDevice {
                     File plainFile = new File(plainFilePath);
 
                     // getting secret key, using it to decrypt
-                    SecretKey skey = (SecretKey) CipherHelper.unwrap(privateKey, Base64.getDecoder().decode(enDomkey));
+                    SecretKey skey = (SecretKey) CipherHelper.unwrapSkey(privateKey, Base64.getDecoder().decode(enDomkey));
                     CipherHelper.handleFileAES_ECB(Cipher.DECRYPT_MODE, skey, encryptedFile, plainFile);
                     encryptedFile.delete();
 
@@ -316,7 +316,7 @@ public class IoTDevice {
                     ServerResponse sResponse = (ServerResponse) in.readObject();
 
                     String enDomkey = sResponse.encryptedDomainKey();
-                    SecretKey sKey = (SecretKey) CipherHelper.unwrap(privateKey, Base64.getDecoder().decode(enDomkey));
+                    SecretKey sKey = (SecretKey) CipherHelper.unwrapSkey(privateKey, Base64.getDecoder().decode(enDomkey));
 
 
                     HashMap<String, String> enTemps = (HashMap<String, String>) sResponse.temperatures();
@@ -385,7 +385,7 @@ public class IoTDevice {
                 // getting secret key
                 String enDomkey = enDomkeysMap.get(dom);
                 byte[] wrappedKey = Base64.getDecoder().decode(enDomkey);
-                SecretKey sKey = (SecretKey) CipherHelper.unwrap(privateKey, wrappedKey);
+                SecretKey sKey = (SecretKey) CipherHelper.unwrapSkey(privateKey, wrappedKey);
 
                 // write domain name
                 out.writeObject(dom);                
@@ -451,7 +451,7 @@ public class IoTDevice {
                 // getting encrypted dom keys
                 String enDomkey = enDomkeysMap.get(dom);
                 byte[] wrappedKey = Base64.getDecoder().decode(enDomkey);
-                SecretKey sKey = (SecretKey) CipherHelper.unwrap(privateKey, wrappedKey);
+                SecretKey sKey = (SecretKey) CipherHelper.unwrapSkey(privateKey, wrappedKey);
                 // use sKey to encrypt temp
                 byte[] encryptedTemp = CipherHelper.encryptAES_ECB(sKey, temp.getBytes());
                 out.writeObject(dom);                

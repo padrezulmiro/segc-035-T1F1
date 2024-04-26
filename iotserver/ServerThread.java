@@ -130,10 +130,10 @@ public class ServerThread extends Thread {
         String devID = (String) in.readObject();
         ServerResponse sr = manager.getEncryptedDomainKeys(userID,devID); //
 
-        System.out.println("Endomkeys requested:");
-        for (Map.Entry<String, String> entry : sr.allEncryptedDomainKeys().entrySet()) {
-            System.out.println(entry.getKey() + ": " + entry.getValue());
-        }
+        // System.out.println("Endomkeys requested:");
+        // for (Map.Entry<String, String> entry : sr.allEncryptedDomainKeys().entrySet()) {
+        //     System.out.println(entry.getKey() + ": " + entry.getValue());
+        // }
 
         out.writeObject(sr); 
         return sr.allEncryptedDomainKeys().size();

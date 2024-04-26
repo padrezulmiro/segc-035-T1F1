@@ -82,24 +82,6 @@ public class CipherHelper {
     }
 
 
-    // private static byte[] getParameters(String paramFilePath, String domainName) throws IOException{
-
-    //     File paramFile = new File(paramFilePath);
-    //     if(!paramFile.createNewFile()){
-    //         // param file already exist
-    //         BufferedReader reader = new BufferedReader(new FileReader(paramFile));
-    //         String line = (String) reader.readLine();
-    //         return Base64.getDecoder().decode(line);
-    //     }
-
-    //     // // If the params don't exist
-    //     // SymmetricCipherParams params = new SymmetricCipherParams(generateSalt());
-    //     // BufferedWriter writer = FileHelper.createFileWriter(paramFile);
-    //     // writer.write(domainName + SP + params.toString());
-    //     // writer.close();
-    //     return null;
-    // }
-
     /*
      * uses PBE with AES 128 bits
      */
@@ -216,7 +198,7 @@ public class CipherHelper {
      * @throws BadPaddingException 
      * @throws IllegalBlockSizeException 
      */
-    public static Key unwrap(PrivateKey priKey, byte[] wrappedKey)
+    public static Key unwrapSkey(PrivateKey priKey, byte[] wrappedKey)
         throws NoSuchAlgorithmException, NoSuchPaddingException,
         InvalidKeyException, IllegalBlockSizeException, BadPaddingException{
         Cipher c = Cipher.getInstance("RSA/ECB/PKCS1Padding");
