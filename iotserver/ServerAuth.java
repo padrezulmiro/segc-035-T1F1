@@ -11,10 +11,12 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.ByteBuffer;
 import java.security.InvalidKeyException;
+import java.security.KeyStoreException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.Signature;
 import java.security.SignatureException;
+import java.security.UnrecoverableKeyException;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateEncodingException;
 import java.security.cert.CertificateException;
@@ -22,11 +24,17 @@ import java.security.cert.CertificateFactory;
 import java.util.Base64;
 import java.util.concurrent.ThreadLocalRandom;
 
+import javax.crypto.Cipher;
+
+import iohelper.CipherHelper;
 import iohelper.Utils;
 
 public class ServerAuth {
     private static volatile ServerAuth INSTANCE;
 
+    private static final String HASH_KEY_ALIAS = "files-hash-key";
+    private static final String MAC_ALGORITHM = "HmacSHA256";
+    private static final String HMAC_FILE_PATH = "./output/server/attestation-sha";
     private static final String USER_FILEPATH = "./output/server/user.txt";
     private static String apiKey;
 
@@ -148,7 +156,7 @@ public class ServerAuth {
     }
 
     public static boolean verifyAttestationHash(byte[] hash, long nonce)
-            throws IOException, NoSuchAlgorithmException {
+            throws IOException, NoSuchAlgorithmException{
         final int CHUNK_SIZE = 1024;
         String clientExecPath = Utils.getAttestationPath();
         long clientExecSize = new File(clientExecPath).length();
@@ -167,6 +175,26 @@ public class ServerAuth {
         clientExecInStream.close();
 
         byte[] computedHash = md.digest();
+
+        // if there is a hmac 
+        File hmac = new File(HMAC_FILE_PATH);
+
+        try {
+            if (hmac.exists()){
+                CipherHelper.verifyHmac(Base64.getEncoder().encodeToString(computedHash),
+                                         HASH_KEY_ALIAS, MAC_ALGORITHM, HMAC_FILE_PATH);
+            }else{
+                CipherHelper.writeHmacToFile(
+                    CipherHelper.computeFileHash(Base64.getEncoder().encodeToString(computedHash),
+                                        HASH_KEY_ALIAS, MAC_ALGORITHM), HMAC_FILE_PATH);
+            }
+
+        } catch (UnrecoverableKeyException | InvalidKeyException | KeyStoreException | NoSuchAlgorithmException
+                | CertificateException | IOException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+        // check if the digest is more or less
         return MessageDigest.isEqual(hash, computedHash);
     }
 }

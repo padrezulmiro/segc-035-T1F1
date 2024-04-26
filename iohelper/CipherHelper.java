@@ -8,6 +8,9 @@ import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.PrintWriter;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.security.AlgorithmParameters;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
@@ -19,21 +22,26 @@ import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.SecureRandom;
+import java.security.UnrecoverableKeyException;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.KeySpec;
+import java.util.Arrays;
 import java.util.Base64;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
 import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.Mac;
 import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
 import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.PBEKeySpec;
 import javax.crypto.spec.SecretKeySpec;
+
+import iotserver.ServerConfig;
 
 public class CipherHelper {
 
@@ -228,6 +236,40 @@ public class CipherHelper {
         // byte[] wrappedKey = c.wrap(sharedKey);
         byte[] wrappedKey = c.doFinal(sharedKey.getEncoded());
         return wrappedKey;
+    }
+
+    public static byte[] computeFileHash(String body, String alias, String algorithm) throws KeyStoreException,
+                NoSuchAlgorithmException, CertificateException, IOException,
+                UnrecoverableKeyException, InvalidKeyException {
+        String keyStorePath = ServerConfig.getInstance().keyStorePath();
+        String keyStorePwd = ServerConfig.getInstance().keyStorePwd();
+        KeyStore ks = CipherHelper.getKeyStore(keyStorePath, keyStorePwd);
+        Key key = ks.getKey(alias, keyStorePwd.toCharArray());
+        Mac mac = Mac.getInstance(algorithm);
+        mac.init(key);
+        mac.update(body.getBytes());
+        byte[] ret = mac.doFinal();
+        return ret;
+    }
+
+    public static boolean verifyHmac(String target, String alias,
+        String algorithm, String filepath) throws IOException,
+        UnrecoverableKeyException, InvalidKeyException, KeyStoreException,
+        NoSuchAlgorithmException, CertificateException {
+        File f = new File(filepath);
+        f.createNewFile();
+        byte[] hmac = Files.readAllBytes(Paths.get(filepath));
+        System.out.println(" written HMAC: " + Base64.getEncoder().encodeToString(hmac));
+        byte[] readHmac = computeFileHash(target,alias,algorithm);
+        System.out.println("computed HMAC: " + Base64.getEncoder().encodeToString(readHmac));
+        return Arrays.equals(hmac, readHmac);
+    }
+
+    public static void writeHmacToFile(byte[] hmac, String filepath) throws IOException {
+        new PrintWriter(filepath).close(); // Empties Hmac file
+        FileOutputStream fos = new FileOutputStream(filepath);
+        fos.write(hmac);
+        fos.close();
     }
 
 }
