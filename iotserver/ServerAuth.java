@@ -176,16 +176,17 @@ public class ServerAuth {
 
         byte[] computedHash = md.digest();
 
-        // if there is a hmac 
         File hmac = new File(HMAC_FILE_PATH);
-
+        boolean validHmac = false;
+        boolean validDigest = MessageDigest.isEqual(hash, computedHash);
         try {
-            if (hmac.exists()){
-                CipherHelper.verifyHmac(Base64.getEncoder().encodeToString(computedHash),
+            if (hmac.exists()){ // if there is a hmac check
+                validHmac = CipherHelper.verifyHmac(Base64.getEncoder().encodeToString(hash),
                                          HASH_KEY_ALIAS, MAC_ALGORITHM, HMAC_FILE_PATH);
-            }else{
+            }else if (validDigest){ // if it's the first time + digest valid
+                validHmac = true;
                 CipherHelper.writeHmacToFile(
-                    CipherHelper.computeFileHash(Base64.getEncoder().encodeToString(computedHash),
+                    CipherHelper.computeFileHash(Base64.getEncoder().encodeToString(hash),
                                         HASH_KEY_ALIAS, MAC_ALGORITHM), HMAC_FILE_PATH);
             }
 
@@ -195,6 +196,6 @@ public class ServerAuth {
             e.printStackTrace();
         }
         // check if the digest is more or less
-        return MessageDigest.isEqual(hash, computedHash);
+        return validDigest && validHmac;
     }
 }
