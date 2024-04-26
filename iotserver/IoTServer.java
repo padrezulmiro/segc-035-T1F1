@@ -48,6 +48,7 @@ public class IoTServer {
         System.setProperty("javax.net.ssl.keyStoreType", "JCEKS");
 
         SERVER_AUTH = ServerAuth.getInstance();
+        ServerAuth.setApiKey(apiKeyArg);
         SERVER_MANAGER = ServerManager.getInstance();
 
         IoTServer server = new IoTServer(portArg,

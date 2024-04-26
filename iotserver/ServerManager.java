@@ -17,7 +17,7 @@ public class ServerManager {
 
     private DomainStorage domStorage;
     private DeviceStorage devStorage;
-    private UserStorage userStorage;
+    // private UserStorage userStorage;
 
     private static final String baseDir = "./output/server/";
     private static final String attestationFilePath = "attestation.txt";
@@ -35,7 +35,7 @@ public class ServerManager {
                 e.printStackTrace();
                 System.exit(-1);
             }
-        userStorage = new UserStorage(userFilePath);
+        // userStorage = new UserStorage(userFilePath);
 
         new File(imageDirectoryPath).mkdirs();
         new File(temperatureDirectoryPath).mkdirs();
@@ -88,13 +88,13 @@ public class ServerManager {
     public ServerResponse addUserToDomain(String requesterUID, String newUserID,
             String domainName, String enDomkey) {
         domStorage.writeLock();
-        userStorage.readLock();
+        // userStorage.readLock();
         try {
             if (!domStorage.domainExists(domainName)) {
                 return new ServerResponse(MessageCode.NODM);
             }
 
-            if (!userStorage.isUserRegistered(newUserID)) {
+            if (!ServerAuth.getInstance().isUserRegistered(newUserID)) {
                 return new ServerResponse(MessageCode.NOUSER);
             }
 
@@ -110,7 +110,7 @@ public class ServerManager {
                 return new ServerResponse(MessageCode.USEREXISTS);
             }
         } finally {
-            userStorage.readUnlock();
+            // userStorage.readUnlock();
             domStorage.writeUnlock();
         }
     }
@@ -265,25 +265,25 @@ public class ServerManager {
      *AUTHENTICATION====================================================================================================================
      */
 
-    public ServerResponse authenticateUser(String user)
-            throws IOException {
-        userStorage.readLock();
-        try {
-            if (userStorage.isUserRegistered(user)) {
-                return new ServerResponse(MessageCode.OK_USER);
-            }
-        } finally {
-            userStorage.readUnlock();
-        }
+    // public ServerResponse authenticateUser(String user)
+    //         throws IOException {
+    //     // userStorage.readLock();
+    //     try {
+    //         if (!ServerAuth.getInstance().isUserRegistered(user)) {
+    //             return new ServerResponse(MessageCode.OK_USER);
+    //         }
+    //     } finally {
+    //         // userStorage.readUnlock();
+    //     }
 
-        userStorage.writeLock();
-        try {
-            userStorage.registerUser(user, "");
-            return new ServerResponse(MessageCode.OK_NEW_USER);
-        } finally {
-            userStorage.writeUnlock();
-        }
-    }
+    //     userStorage.writeLock();
+    //     try {
+    //         userStorage.registerUser(user, "");
+    //         return new ServerResponse(MessageCode.OK_NEW_USER);
+    //     } finally {
+    //         userStorage.writeUnlock();
+    //     }
+    // }
 
     public void disconnectDevice(String userID, String devID){
         devStorage.writeLock();
