@@ -8,7 +8,6 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -921,49 +920,4 @@ public class IoTDevice {
         return false;
     }
 
-    /**
-     * Sends device ID for authentication.
-     * 
-     * @param deviceID
-     */
-    /*
-     * private static void deviceAuth(String deviceID) {
-     * try {
-     * System.out.println("Starting device ID authentication.");
-     * out.writeObject(MessageCode.AD);
-     * out.writeObject(deviceID);
-     * boolean validID = false;
-     * 
-     * // out.writeObject(deviceID); //probably only once
-     * 
-     * do {
-     * MessageCode code = (MessageCode) in.readObject();
-     * switch (code) {
-     * case NOK_DEVID:
-     * System.out.println(MessageCode.NOK_DEVID.getDesc());
-     * 
-     * // Scanner sc = new Scanner(System.in);
-     * System.out.println("New device ID:");
-     * String newID = sc.nextLine();
-     * // sc.close();
-     * out.writeObject(MessageCode.AD);
-     * out.writeObject(newID);
-     * break;
-     * case OK_DEVID:
-     * System.out.println(MessageCode.OK_DEVID.getDesc());
-     * validID = true;
-     * default:
-     * break;
-     * }
-     * } while (!validID);
-     * 
-     * } catch (IOException e) {
-     * System.err.println("ERROR" + e.getMessage());
-     * System.exit(-1);
-     * } catch (ClassNotFoundException e) {
-     * e.printStackTrace();
-     * System.exit(-1);
-     * }
-     * }
-     */
 }
